@@ -156,52 +156,54 @@ model Instrument {
 }
 
 model Trade {
-  id                String           @id @default(cuid())
-  accountId         String
-  source            TradeSource      @default(LIVE)
-  backtestSessionId String?
-  instrumentId      String
-  planId            String?
-  playbookId        String?
-  direction         TradeDirection
-  status            TradeStatus      @default(OPEN)
-  openedAt          DateTime
-  closedAt          DateTime?
-  quantity          Decimal          @db.Decimal(20, 8)
-  averageEntry      Decimal          @db.Decimal(20, 8)
-  averageExit       Decimal?         @db.Decimal(20, 8)
-  grossPnl          Decimal          @default(0) @db.Decimal(20, 4)
-  netPnl            Decimal          @default(0) @db.Decimal(20, 4)
-  fees              Decimal          @default(0) @db.Decimal(20, 4)
-  returnPercent     Decimal?         @db.Decimal(12, 4)
-  rMultiple         Decimal?         @db.Decimal(12, 4)
-  initialRisk       Decimal?         @db.Decimal(20, 4)
-  stopPrice         Decimal?         @db.Decimal(20, 8)
-  targetPrice       Decimal?         @db.Decimal(20, 8)
-  stopLossPoints    Decimal?         @db.Decimal(20, 8)
-  takeProfitPoints  Decimal?         @db.Decimal(20, 8)
-  confidence        Int?
-  qualityGrade      String?
-  followedPlan      Boolean?
-  emotion           String?
-  marketCondition   String?
-  newsOnDay         String?
-  lesson            String?
-  setup             String?
-  mistakes          String[]         @default([])
-  checkedRules      String[]         @default([])
-  notes             String?
-  deletedAt         DateTime?
-  createdAt         DateTime         @default(now())
-  updatedAt         DateTime         @updatedAt
-  account           TradingAccount   @relation(fields: [accountId], references: [id], onDelete: Cascade)
-  instrument        Instrument       @relation(fields: [instrumentId], references: [id])
-  executions        Execution[]
-  tags              TradeTag[]
-  plan              TradePlan?       @relation(fields: [planId], references: [id], onDelete: SetNull)
-  playbook          Playbook?        @relation(fields: [playbookId], references: [id], onDelete: SetNull)
-  attachments       Attachment[]
-  backtestSession   BacktestSession? @relation(fields: [backtestSessionId], references: [id], onDelete: SetNull)
+  id                    String           @id @default(cuid())
+  accountId             String
+  source                TradeSource      @default(LIVE)
+  backtestSessionId     String?
+  instrumentId          String
+  planId                String?
+  playbookId            String?
+  direction             TradeDirection
+  status                TradeStatus      @default(OPEN)
+  openedAt              DateTime
+  closedAt              DateTime?
+  quantity              Decimal          @db.Decimal(20, 8)
+  averageEntry          Decimal          @db.Decimal(20, 8)
+  averageExit           Decimal?         @db.Decimal(20, 8)
+  grossPnl              Decimal          @default(0) @db.Decimal(20, 4)
+  netPnl                Decimal          @default(0) @db.Decimal(20, 4)
+  fees                  Decimal          @default(0) @db.Decimal(20, 4)
+  returnPercent         Decimal?         @db.Decimal(12, 4)
+  rMultiple             Decimal?         @db.Decimal(12, 4)
+  initialRisk           Decimal?         @db.Decimal(20, 4)
+  stopPrice             Decimal?         @db.Decimal(20, 8)
+  targetPrice           Decimal?         @db.Decimal(20, 8)
+  stopLossPoints        Decimal?         @db.Decimal(20, 8)
+  takeProfitPoints      Decimal?         @db.Decimal(20, 8)
+  maximumFavorablePrice Decimal?         @db.Decimal(20, 8)
+  maximumAdversePrice   Decimal?         @db.Decimal(20, 8)
+  confidence            Int?
+  qualityGrade          String?
+  followedPlan          Boolean?
+  emotion               String?
+  marketCondition       String?
+  newsOnDay             String?
+  lesson                String?
+  setup                 String?
+  mistakes              String[]         @default([])
+  checkedRules          String[]         @default([])
+  notes                 String?
+  deletedAt             DateTime?
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+  account               TradingAccount   @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  instrument            Instrument       @relation(fields: [instrumentId], references: [id])
+  executions            Execution[]
+  tags                  TradeTag[]
+  plan                  TradePlan?       @relation(fields: [planId], references: [id], onDelete: SetNull)
+  playbook              Playbook?        @relation(fields: [playbookId], references: [id], onDelete: SetNull)
+  attachments           Attachment[]
+  backtestSession       BacktestSession? @relation(fields: [backtestSessionId], references: [id], onDelete: SetNull)
 
   @@index([accountId, closedAt])
   @@index([accountId, deletedAt])
@@ -312,6 +314,10 @@ model TradePlan {
   entryConditions String?
   stopPlan        String?
   targetPlan      String?
+  plannedEntry    Decimal?       @db.Decimal(20, 8)
+  plannedStop     Decimal?       @db.Decimal(20, 8)
+  plannedTarget   Decimal?       @db.Decimal(20, 8)
+  maxTrades       Int?
   riskBudget      Decimal?       @db.Decimal(20, 4)
   checklist       Json?
   notes           String?
