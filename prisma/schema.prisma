@@ -319,6 +319,7 @@ model TradePlan {
   plannedTarget   Decimal?       @db.Decimal(20, 8)
   maxTrades       Int?
   riskBudget      Decimal?       @db.Decimal(20, 4)
+  newsOnDay       String?
   checklist       Json?
   notes           String?
   createdAt       DateTime       @default(now())

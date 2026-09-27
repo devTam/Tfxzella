@@ -1,0 +1,2 @@
+ALTER TABLE "TradePlan"
+ADD COLUMN "newsOnDay" TEXT;

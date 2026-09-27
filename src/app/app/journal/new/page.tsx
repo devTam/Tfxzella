@@ -6,7 +6,7 @@ export const metadata={title:"Log trade"};
 
 export default async function NewTrade(){
   const user=await viewer();
-  const [list,playbooks,plans,tags]=await Promise.all([accounts(),db.playbook.findMany({where:{userId:user.id},select:{id:true,name:true,entryChecklist:true,isActive:true},orderBy:[{isActive:"desc"},{name:"asc"}]}),db.tradePlan.findMany({where:{userId:user.id},select:{id:true,accountId:true,planDate:true,playbookId:true,marketBias:true,thesis:true,plannedEntry:true,plannedStop:true,plannedTarget:true,riskBudget:true,maxTrades:true},orderBy:{planDate:"desc"}}),db.tag.findMany({where:{userId:user.id},select:{id:true,name:true,color:true},orderBy:{name:"asc"}})]);
+  const [list,playbooks,plans,tags]=await Promise.all([accounts(),db.playbook.findMany({where:{userId:user.id},select:{id:true,name:true,entryChecklist:true,isActive:true},orderBy:[{isActive:"desc"},{name:"asc"}]}),db.tradePlan.findMany({where:{userId:user.id},select:{id:true,accountId:true,planDate:true,playbookId:true,marketBias:true,thesis:true,plannedEntry:true,plannedStop:true,plannedTarget:true,riskBudget:true,maxTrades:true,newsOnDay:true},orderBy:{planDate:"desc"}}),db.tag.findMany({where:{userId:user.id},select:{id:true,name:true,color:true},orderBy:{name:"asc"}})]);
   const now=new Date();
   const later=new Date(now.getTime()+5*60_000);
   const date=[now.getFullYear(),String(now.getMonth()+1).padStart(2,"0"),String(now.getDate()).padStart(2,"0")].join("-");
