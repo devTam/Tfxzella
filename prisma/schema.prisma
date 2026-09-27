@@ -1,0 +1,403 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum AssetClass {
+  STOCK
+  FUTURE
+  FOREX
+}
+
+enum ExecutionSide {
+  BUY
+  SELL
+}
+
+enum TradeDirection {
+  LONG
+  SHORT
+}
+
+enum TradeStatus {
+  OPEN
+  WIN
+  LOSS
+  BREAKEVEN
+}
+
+enum ReviewPeriod {
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
+enum ImportStatus {
+  PREVIEW
+  COMMITTED
+  UNDONE
+  FAILED
+}
+
+enum AccountType {
+  LIVE
+  DEMO
+  PROP
+}
+
+enum TradeSource {
+  LIVE
+  BACKTEST
+}
+
+model User {
+  id                  String               @id @default(cuid())
+  name                String?
+  email               String               @unique
+  emailVerified       DateTime?
+  passwordHash        String
+  image               String?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  accounts            TradingAccount[]
+  sessions            Session[]
+  passwordResetTokens PasswordResetToken[]
+  authenticators      Authenticator[]
+  tags                Tag[]
+  playbooks           Playbook[]
+  plans               TradePlan[]
+  reviews             Review[]
+  attachments         Attachment[]
+  importMappings      ImportMapping[]
+  importBatches       ImportBatch[]
+  backtestSessions    BacktestSession[]
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expires   DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Authenticator {
+  credentialID         String  @unique
+  userId               String
+  providerAccountId    String
+  credentialPublicKey  String
+  counter              Int
+  credentialDeviceType String
+  credentialBackedUp   Boolean
+  transports           String?
+  user                 User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, credentialID])
+}
+
+model TradingAccount {
+  id               String            @id @default(cuid())
+  userId           String
+  name             String
+  type             AccountType       @default(DEMO)
+  currency         String            @default("USD")
+  timezone         String            @default("UTC")
+  weekStartsOn     Int               @default(1)
+  startingBalance  Decimal           @default(0) @db.Decimal(20, 4)
+  archivedAt       DateTime?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  instruments      Instrument[]
+  trades           Trade[]
+  executions       Execution[]
+  plans            TradePlan[]
+  reviews          Review[]
+  importBatches    ImportBatch[]
+  backtestSessions BacktestSession[]
+
+  @@index([userId, archivedAt])
+}
+
+model Instrument {
+  id         String         @id @default(cuid())
+  accountId  String
+  symbol     String
+  assetClass AssetClass
+  tickSize   Decimal?       @db.Decimal(20, 8)
+  pointValue Decimal        @default(1) @db.Decimal(20, 8)
+  account    TradingAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  executions Execution[]
+  trades     Trade[]
+
+  @@unique([accountId, symbol])
+}
+
+model Trade {
+  id                String           @id @default(cuid())
+  accountId         String
+  source            TradeSource      @default(LIVE)
+  backtestSessionId String?
+  instrumentId      String
+  planId            String?
+  playbookId        String?
+  direction         TradeDirection
+  status            TradeStatus      @default(OPEN)
+  openedAt          DateTime
+  closedAt          DateTime?
+  quantity          Decimal          @db.Decimal(20, 8)
+  averageEntry      Decimal          @db.Decimal(20, 8)
+  averageExit       Decimal?         @db.Decimal(20, 8)
+  grossPnl          Decimal          @default(0) @db.Decimal(20, 4)
+  netPnl            Decimal          @default(0) @db.Decimal(20, 4)
+  fees              Decimal          @default(0) @db.Decimal(20, 4)
+  returnPercent     Decimal?         @db.Decimal(12, 4)
+  rMultiple         Decimal?         @db.Decimal(12, 4)
+  initialRisk       Decimal?         @db.Decimal(20, 4)
+  stopPrice         Decimal?         @db.Decimal(20, 8)
+  targetPrice       Decimal?         @db.Decimal(20, 8)
+  stopLossPoints    Decimal?         @db.Decimal(20, 8)
+  takeProfitPoints  Decimal?         @db.Decimal(20, 8)
+  confidence        Int?
+  qualityGrade      String?
+  followedPlan      Boolean?
+  emotion           String?
+  marketCondition   String?
+  newsOnDay         String?
+  lesson            String?
+  setup             String?
+  mistakes          String[]         @default([])
+  checkedRules      String[]         @default([])
+  notes             String?
+  deletedAt         DateTime?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  account           TradingAccount   @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  instrument        Instrument       @relation(fields: [instrumentId], references: [id])
+  executions        Execution[]
+  tags              TradeTag[]
+  plan              TradePlan?       @relation(fields: [planId], references: [id], onDelete: SetNull)
+  playbook          Playbook?        @relation(fields: [playbookId], references: [id], onDelete: SetNull)
+  attachments       Attachment[]
+  backtestSession   BacktestSession? @relation(fields: [backtestSessionId], references: [id], onDelete: SetNull)
+
+  @@index([accountId, closedAt])
+  @@index([accountId, deletedAt])
+  @@index([accountId, source, deletedAt, openedAt])
+  @@index([playbookId, deletedAt, openedAt])
+  @@index([backtestSessionId, openedAt])
+}
+
+model BacktestSession {
+  id              String         @id @default(cuid())
+  userId          String
+  accountId       String
+  name            String
+  marketStartedAt DateTime
+  marketEndedAt   DateTime?
+  notes           String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  account         TradingAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  trades          Trade[]
+
+  @@index([userId, marketStartedAt])
+}
+
+model Execution {
+  id            String         @id @default(cuid())
+  accountId     String
+  instrumentId  String
+  tradeId       String?
+  importBatchId String?
+  side          ExecutionSide
+  quantity      Decimal        @db.Decimal(20, 8)
+  price         Decimal        @db.Decimal(20, 8)
+  commission    Decimal        @default(0) @db.Decimal(20, 4)
+  fees          Decimal        @default(0) @db.Decimal(20, 4)
+  executedAt    DateTime
+  externalId    String?
+  createdAt     DateTime       @default(now())
+  account       TradingAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  instrument    Instrument     @relation(fields: [instrumentId], references: [id])
+  trade         Trade?         @relation(fields: [tradeId], references: [id], onDelete: SetNull)
+  importBatch   ImportBatch?   @relation(fields: [importBatchId], references: [id], onDelete: SetNull)
+
+  @@unique([accountId, externalId])
+  @@index([accountId, executedAt])
+}
+
+model Tag {
+  id        String        @id @default(cuid())
+  userId    String
+  name      String
+  color     String        @default("#21c989")
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  trades    TradeTag[]
+  playbooks PlaybookTag[]
+
+  @@unique([userId, name])
+}
+
+model TradeTag {
+  tradeId String
+  tagId   String
+  trade   Trade  @relation(fields: [tradeId], references: [id], onDelete: Cascade)
+  tag     Tag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([tradeId, tagId])
+}
+
+model Playbook {
+  id                String        @id @default(cuid())
+  userId            String
+  name              String
+  description       String?
+  setupCriteria     String?
+  invalidationRules String?
+  entryChecklist    Json?
+  exitChecklist     Json?
+  riskRules         String?
+  examples          String?
+  isActive          Boolean       @default(true)
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  user              User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tags              PlaybookTag[]
+  plans             TradePlan[]
+  trades            Trade[]
+}
+
+model PlaybookTag {
+  playbookId String
+  tagId      String
+  playbook   Playbook @relation(fields: [playbookId], references: [id], onDelete: Cascade)
+  tag        Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([playbookId, tagId])
+}
+
+model TradePlan {
+  id              String         @id @default(cuid())
+  userId          String
+  accountId       String
+  playbookId      String?
+  planDate        DateTime
+  marketBias      String?
+  watchlist       String[]       @default([])
+  thesis          String?
+  entryConditions String?
+  stopPlan        String?
+  targetPlan      String?
+  riskBudget      Decimal?       @db.Decimal(20, 4)
+  checklist       Json?
+  notes           String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  account         TradingAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  playbook        Playbook?      @relation(fields: [playbookId], references: [id], onDelete: SetNull)
+  trades          Trade[]
+  attachments     Attachment[]
+
+  @@unique([accountId, planDate])
+}
+
+model Review {
+  id          String          @id @default(cuid())
+  userId      String
+  accountId   String?
+  period      ReviewPeriod
+  startsAt    DateTime
+  endsAt      DateTime
+  metrics     Json
+  wins        String?
+  mistakes    String?
+  lessons     String?
+  goals       String?
+  rating      Int?
+  notes       String?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  account     TradingAccount? @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  attachments Attachment[]
+
+  @@index([userId, startsAt])
+}
+
+model Attachment {
+  id        String     @id @default(cuid())
+  userId    String
+  tradeId   String?
+  planId    String?
+  reviewId  String?
+  objectKey String
+  mimeType  String
+  size      Int
+  createdAt DateTime   @default(now())
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  trade     Trade?     @relation(fields: [tradeId], references: [id], onDelete: Cascade)
+  plan      TradePlan? @relation(fields: [planId], references: [id], onDelete: Cascade)
+  review    Review?    @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+}
+
+model ImportMapping {
+  id         String   @id @default(cuid())
+  userId     String
+  name       String
+  mapping    Json
+  timezone   String
+  dateFormat String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, name])
+}
+
+model ImportBatch {
+  id            String         @id @default(cuid())
+  userId        String
+  accountId     String
+  filename      String
+  fingerprint   String
+  status        ImportStatus   @default(PREVIEW)
+  mapping       Json
+  rowCount      Int            @default(0)
+  importedCount Int            @default(0)
+  errorCount    Int            @default(0)
+  errors        Json?
+  createdAt     DateTime       @default(now())
+  committedAt   DateTime?
+  undoneAt      DateTime?
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  account       TradingAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  executions    Execution[]
+
+  @@unique([userId, fingerprint])
+  @@index([userId, createdAt])
+}

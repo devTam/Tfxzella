@@ -1,0 +1,1 @@
+ALTER TABLE "Trade" ADD COLUMN "checkedRules" TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[];
