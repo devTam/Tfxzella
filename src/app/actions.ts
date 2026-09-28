@@ -8,12 +8,14 @@ import { auth, signIn, signOut } from "@/auth";
 import { db } from "@/lib/db";
 import { calculateMetrics, groupExecutions } from "@/lib/trades";
 import { v2 as cloudinary } from "cloudinary";
+import { calculateCommission } from "@/lib/fees";
 
 async function userId(){ const s=await auth(); if(!s?.user?.id) redirect("/login"); return s.user.id; }
 const text=(fd:FormData,k:string)=>String(fd.get(k)??"").trim();
 const lines=(fd:FormData,k:string)=>text(fd,k).split("\n").map(value=>value.trim()).filter(Boolean);
 const optionalNumber=(fd:FormData,k:string)=>{const value=text(fd,k);if(!value)return null;const number=Number(value);if(!Number.isFinite(number)||number<0)throw new Error(`${k} must be a positive number`);return value};
 const optionalInteger=(fd:FormData,k:string,min:number,max:number)=>{const value=text(fd,k);if(!value)return null;const number=Number(value);if(!Number.isInteger(number)||number<min||number>max)throw new Error(`${k} must be between ${min} and ${max}`);return number};
+const commissionFees=(fd:FormData,symbol:string,quantity:string)=>calculateCommission(text(fd,"feeSchedule"),symbol,Number(quantity),Number(text(fd,"fees")||0)).toString();
 const attachments=(fd:FormData)=>fd.getAll("attachmentKey").map((key,index)=>({objectKey:String(key),mimeType:String(fd.getAll("attachmentMime")[index]||"image/png"),size:Number(fd.getAll("attachmentSize")[index]||0)})).filter(x=>x.objectKey&&x.size>0);
 function revalidatePlaybooks(){revalidatePath("/app/playbooks");revalidatePath("/app/plans");revalidatePath("/app/journal/new");revalidatePath("/app/backtests","layout")}
 function revalidateTradeEntry(){revalidatePath("/app/journal/new");revalidatePath("/app/backtests","layout")}
@@ -82,7 +84,7 @@ export async function createTrade(formData:FormData){
   const symbol=text(formData,"symbol").toUpperCase(); const assetClass=(text(formData,"assetClass")||"STOCK") as "STOCK"|"FUTURE"|"FOREX";
   const pointValue=text(formData,"multiplier")||(symbol==="MNQ"?"2":"1");
   const instrument=await db.instrument.upsert({where:{accountId_symbol:{accountId,symbol}},update:{assetClass,pointValue},create:{accountId,symbol,assetClass,pointValue}});
-  const direction=text(formData,"direction") as "LONG"|"SHORT"; const quantity=text(formData,"quantity"), entry=text(formData,"entry"), exit=text(formData,"exit"), fees=text(formData,"fees")||"0";
+  const direction=text(formData,"direction") as "LONG"|"SHORT"; const quantity=text(formData,"quantity"), entry=text(formData,"entry"), exit=text(formData,"exit"), fees=commissionFees(formData,symbol,quantity);
   const fills=[{side:direction==="LONG"?"BUY" as const:"SELL" as const,quantity,price:entry,executedAt:openedAt},{side:direction==="LONG"?"SELL" as const:"BUY" as const,quantity,price:exit,fees,executedAt:closedAt}],levels=tradeLevels(formData,entry,direction);
   const [calc]=groupExecutions(fills,instrument.pointValue.toString());
   await db.trade.create({data:{...levels,accountId,instrumentId:instrument.id,planId:plan?.id||null,playbookId,source,backtestSessionId:backtestSession?.id||null,direction,status:calc.status,openedAt,closedAt,quantity:calc.quantity.toString(),averageEntry:calc.averageEntry.toString(),averageExit:calc.averageExit?.toString(),grossPnl:calc.grossPnl.toString(),netPnl:calc.netPnl.toString(),fees:calc.fees.toString(),returnPercent:calc.returnPercent?.toString(),initialRisk:optionalNumber(formData,"initialRisk"),plannedEntry:optionalNumber(formData,"plannedEntry"),plannedStop:optionalNumber(formData,"plannedStop"),plannedTarget:optionalNumber(formData,"plannedTarget"),entryConditions:text(formData,"entryConditions")||null,stopPlan:text(formData,"stopPlan")||null,targetPlan:text(formData,"targetPlan")||null,maximumFavorablePrice:optionalNumber(formData,"maximumFavorablePrice"),maximumAdversePrice:optionalNumber(formData,"maximumAdversePrice"),confidence:optionalInteger(formData,"confidence",1,5),setup:text(formData,"setup")||null,qualityGrade:text(formData,"qualityGrade")||null,followedPlan:text(formData,"followedPlan")==="true"?true:text(formData,"followedPlan")==="false"?false:null,emotion:text(formData,"emotion")||null,marketCondition:text(formData,"marketCondition")||null,newsOnDay:plan?plan.newsOnDay:text(formData,"newsOnDay")||null,lesson:text(formData,"lesson")||null,mistakes:formData.getAll("mistakes").map(String),checkedRules:formData.getAll("checkedRules").map(String),notes:text(formData,"notes")||null,tags:{create:ownedTags.map(t=>({tagId:t.id}))},executions:{create:fills.map(f=>({accountId,instrumentId:instrument.id,side:f.side,quantity:f.quantity,price:f.price,fees:"fees" in f?f.fees:"0",executedAt:f.executedAt}))},attachments:{create:attachments(formData).map(a=>({...a,userId:uid}))}}});
