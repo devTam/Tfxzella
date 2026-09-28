@@ -180,6 +180,12 @@ model Trade {
   targetPrice           Decimal?         @db.Decimal(20, 8)
   stopLossPoints        Decimal?         @db.Decimal(20, 8)
   takeProfitPoints      Decimal?         @db.Decimal(20, 8)
+  plannedEntry          Decimal?         @db.Decimal(20, 8)
+  plannedStop           Decimal?         @db.Decimal(20, 8)
+  plannedTarget         Decimal?         @db.Decimal(20, 8)
+  entryConditions       String?
+  stopPlan              String?
+  targetPlan            String?
   maximumFavorablePrice Decimal?         @db.Decimal(20, 8)
   maximumAdversePrice   Decimal?         @db.Decimal(20, 8)
   confidence            Int?
