@@ -4,6 +4,7 @@ import { createTrade } from "@/app/actions";
 import { InstrumentFields } from "@/components/instrument-fields";
 import { ScreenshotUpload } from "@/components/screenshot-upload";
 import { calculateCommission, TRADEIFY_ROUND_TRIP } from "@/lib/fees";
+import { SubmitButton } from "@/components/confirm-submit-button";
 
 type Account={id:string;name:string;currency:string};
 type Option={id:string;name:string;color?:string;entryChecklist?:unknown;isActive?:boolean};
@@ -37,7 +38,7 @@ export function QuickTradeForm({accounts,playbooks,plans,tags,initialDate,initia
       <div className="field full"><label>Mistakes</label><div className="choice-chips">{MISTAKES.map(mistake=><label key={mistake}><input type="checkbox" name="mistakes" value={mistake}/><span>{mistake}</span></label>)}</div></div>
       {tags.length?<div className="field full"><label>Custom tags</label><div className="choice-chips">{tags.map(tag=><label key={tag.id}><input type="checkbox" name="tagIds" value={tag.id}/><span style={{borderColor:tag.color}}>{tag.name}</span></label>)}</div></div>:null}
       <Field label="Initial risk"><input name="initialRisk" type="number" min="0" step="any"/></Field><Field label="Setup note"><input name="setup" placeholder="Opening range breakout"/></Field><details className="full optional-metrics"><summary>Optional edge metrics · MFE and MAE</summary><div className="form-grid section"><Field label="Best price reached"><input name="maximumFavorablePrice" type="number" min="0" step="any"/><span className="help">Highest favorable price while the trade was open.</span></Field><Field label="Worst price reached"><input name="maximumAdversePrice" type="number" min="0" step="any"/><span className="help">Furthest adverse price while the trade was open.</span></Field></div></details><div className="field full"><label>News on the day</label><textarea name="newsOnDay" value={selectedPlan?.newsOnDay??tradeNews} onChange={event=>setTradeNews(event.target.value)} readOnly={Boolean(selectedPlan)} placeholder="Add session news to the daily plan, or enter it here for an unplanned trade."/><span className="help">{selectedPlan?"Inherited from the linked daily plan.":"Link a daily plan to populate this automatically."}</span></div><div className="field full"><label>One lesson from this trade</label><input name="lesson" placeholder="Wait for the candle to close before entering"/></div><div className="field full"><label>Additional notes</label><textarea name="notes" placeholder="Optional context"/></div><ScreenshotUpload/>
-    </div></details><div className="full"><button className="btn save-trade">Save trade</button><span className="help">Tab through fields and press Enter to save.</span></div>
+    </div></details><div className="form-footer full"><SubmitButton className="btn save-trade" pendingLabel="Saving trade…">Save trade</SubmitButton><span className="help">Tab through fields and press Enter to save.</span></div>
   </form>;
 }
 function Field({label,children}:{label:string;children:React.ReactNode}){return <div className="field"><label>{label}</label>{children}</div>}
