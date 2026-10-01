@@ -9,6 +9,7 @@ import { db } from "@/lib/db";
 import { calculateMetrics, groupExecutions } from "@/lib/trades";
 import { v2 as cloudinary } from "cloudinary";
 import { calculateCommission } from "@/lib/fees";
+import { APP_TIME_ZONE, formatNewYorkDate, fromNewYorkTime, newYorkDayEnd, newYorkDayStart } from "@/lib/time";
 
 async function userId(){ const s=await auth(); if(!s?.user?.id) redirect("/login"); return s.user.id; }
 const text=(fd:FormData,k:string)=>String(fd.get(k)??"").trim();
@@ -30,20 +31,20 @@ function tradeLevels(formData:FormData,entryValue:string,direction:"LONG"|"SHORT
 export async function register(formData:FormData){
   const data=z.object({name:z.string().min(2).max(80),email:z.string().email(),password:z.string().min(10).max(128)}).parse({name:text(formData,"name"),email:text(formData,"email").toLowerCase(),password:text(formData,"password")});
   const exists=await db.user.findUnique({where:{email:data.email}}); if(exists) redirect("/login?error=exists");
-  await db.user.create({data:{name:data.name,email:data.email,passwordHash:await hash(data.password),accounts:{create:{name:"My trading account",currency:"USD",timezone:"UTC",startingBalance:10000}}}});
+  await db.user.create({data:{name:data.name,email:data.email,passwordHash:await hash(data.password),accounts:{create:{name:"My trading account",currency:"USD",timezone:APP_TIME_ZONE,startingBalance:10000}}}});
   await signIn("credentials",{email:data.email,password:data.password,redirectTo:"/app"});
 }
 export async function login(formData:FormData){ await signIn("credentials",{email:text(formData,"email"),password:text(formData,"password"),redirectTo:"/app"}); }
 export async function logout(){ await signOut({redirectTo:"/"}); }
 
-export async function createAccount(formData:FormData){ const uid=await userId(); await db.tradingAccount.create({data:{userId:uid,name:text(formData,"name"),currency:text(formData,"currency")||"USD",timezone:text(formData,"timezone")||"UTC",type:(text(formData,"type")||"DEMO") as "LIVE"|"DEMO"|"PROP",startingBalance:text(formData,"startingBalance")||"0"}}); revalidatePath("/app/settings"); }
+export async function createAccount(formData:FormData){ const uid=await userId(); await db.tradingAccount.create({data:{userId:uid,name:text(formData,"name"),currency:text(formData,"currency")||"USD",timezone:APP_TIME_ZONE,type:(text(formData,"type")||"DEMO") as "LIVE"|"DEMO"|"PROP",startingBalance:text(formData,"startingBalance")||"0"}}); revalidatePath("/app/settings"); }
 
 export async function createBacktestSession(formData:FormData){
   const uid=await userId(),accountId=text(formData,"accountId");
   if(!await db.tradingAccount.findFirst({where:{id:accountId,userId:uid}}))throw new Error("Account not found");
-  const marketStartedAt=new Date(text(formData,"marketStartedAt")),marketEndedValue=text(formData,"marketEndedAt"),marketEndedAt=marketEndedValue?new Date(marketEndedValue):null;
+  const marketStartedAt=fromNewYorkTime(text(formData,"marketStartedAt")),marketEndedValue=text(formData,"marketEndedAt"),marketEndedAt=marketEndedValue?fromNewYorkTime(marketEndedValue):null;
   if(Number.isNaN(+marketStartedAt)||(marketEndedAt&&(Number.isNaN(+marketEndedAt)||marketEndedAt<marketStartedAt)))throw new Error("Invalid session times");
-  const session=await db.backtestSession.create({data:{userId:uid,accountId,name:text(formData,"name")||`Backtest ${marketStartedAt.toLocaleDateString()}`,marketStartedAt,marketEndedAt,notes:text(formData,"notes")||null}});
+  const session=await db.backtestSession.create({data:{userId:uid,accountId,name:text(formData,"name")||`Backtest ${formatNewYorkDate(marketStartedAt)}`,marketStartedAt,marketEndedAt,notes:text(formData,"notes")||null}});
   revalidatePath("/app/backtests");redirect(`/app/backtests/${session.id}`);
 }
 
@@ -53,7 +54,7 @@ export async function updateBacktestSession(formData:FormData){
   if(!session)throw new Error("Backtest session not found");
   if(!await db.tradingAccount.findFirst({where:{id:accountId,userId:uid}}))throw new Error("Account not found");
   if(session._count.trades>0&&accountId!==session.accountId)throw new Error("The account cannot be changed after trades have been recorded");
-  const marketStartedAt=new Date(text(formData,"marketStartedAt")),marketEndedValue=text(formData,"marketEndedAt"),marketEndedAt=marketEndedValue?new Date(marketEndedValue):null;
+  const marketStartedAt=fromNewYorkTime(text(formData,"marketStartedAt")),marketEndedValue=text(formData,"marketEndedAt"),marketEndedAt=marketEndedValue?fromNewYorkTime(marketEndedValue):null;
   if(Number.isNaN(+marketStartedAt)||(marketEndedAt&&(Number.isNaN(+marketEndedAt)||marketEndedAt<marketStartedAt)))throw new Error("Invalid session times");
   const name=text(formData,"name");if(!name)throw new Error("Session name is required");
   await db.backtestSession.update({where:{id},data:{accountId,name,marketStartedAt,marketEndedAt,notes:text(formData,"notes")||null}});
@@ -73,7 +74,7 @@ export async function createTrade(formData:FormData){
   const source=text(formData,"source")==="BACKTEST"?"BACKTEST" as const:"LIVE" as const,requestedSession=text(formData,"backtestSessionId");
   const backtestSession=source==="BACKTEST"?await db.backtestSession.findFirst({where:{id:requestedSession,userId:uid,accountId}}):null;
   if(source==="BACKTEST"&&!backtestSession)throw new Error("Backtest session not found");
-  const openedAt=new Date(text(formData,"openedAt")),closedAt=new Date(text(formData,"closedAt")); if(Number.isNaN(+openedAt)||Number.isNaN(+closedAt)||closedAt<openedAt) throw new Error("Invalid execution times");
+  const openedAt=fromNewYorkTime(text(formData,"openedAt")),closedAt=fromNewYorkTime(text(formData,"closedAt")); if(Number.isNaN(+openedAt)||Number.isNaN(+closedAt)||closedAt<openedAt) throw new Error("Invalid execution times");
   const requestedPlan=text(formData,"planId")||null,planDate=new Date(`${text(formData,"openedAt").slice(0,10)}T00:00:00.000Z`);
   const plan=requestedPlan?await db.tradePlan.findFirst({where:{id:requestedPlan,userId:uid,accountId,planDate}}):null;
   if(requestedPlan&&!plan)throw new Error("The selected daily plan does not match this account and trading day");
@@ -97,7 +98,7 @@ export async function createPlaybook(formData:FormData){ const uid=await userId(
 export async function createReview(formData:FormData){
   const uid=await userId(),accountId=text(formData,"accountId")||null;
   if(accountId&&!await db.tradingAccount.findFirst({where:{id:accountId,userId:uid}}))throw new Error("Account not found");
-  const startsAt=new Date(`${text(formData,"startsAt")}T00:00:00Z`),endsAt=new Date(`${text(formData,"endsAt")}T23:59:59Z`);
+  const startsAt=newYorkDayStart(text(formData,"startsAt")),endsAt=newYorkDayEnd(text(formData,"endsAt"));
   const trades=await db.trade.findMany({where:{account:{userId:uid},accountId:accountId||undefined,source:"LIVE",deletedAt:null,closedAt:{gte:startsAt,lte:endsAt}},orderBy:{netPnl:"desc"}});
   const summary=calculateMetrics(trades.map(t=>({netPnl:t.netPnl.toString(),grossPnl:t.grossPnl.toString(),fees:t.fees.toString(),closedAt:t.closedAt})));
   const durationOf=(t:typeof trades[number])=>t.closedAt?Math.max(0,t.closedAt.getTime()-t.openedAt.getTime()):0,avg=(values:number[])=>values.length?values.reduce((sum,n)=>sum+n,0)/values.length:0;
@@ -108,14 +109,14 @@ export async function createReview(formData:FormData){
 }
 
 export async function updateProfile(formData:FormData){const uid=await userId();const name=text(formData,"name");if(name.length<2)throw new Error("Name is too short");await db.user.update({where:{id:uid},data:{name}});revalidatePath("/app","layout");revalidatePath("/app/settings")}
-export async function updateAccount(formData:FormData){const uid=await userId(),id=text(formData,"id");await db.tradingAccount.updateMany({where:{id,userId:uid},data:{name:text(formData,"name"),type:text(formData,"type") as "LIVE"|"DEMO"|"PROP",currency:text(formData,"currency").toUpperCase(),timezone:text(formData,"timezone"),startingBalance:text(formData,"startingBalance")||"0",weekStartsOn:Number(text(formData,"weekStartsOn")||1)}});revalidatePath("/app/settings");revalidatePath("/app","layout")}
+export async function updateAccount(formData:FormData){const uid=await userId(),id=text(formData,"id");await db.tradingAccount.updateMany({where:{id,userId:uid},data:{name:text(formData,"name"),type:text(formData,"type") as "LIVE"|"DEMO"|"PROP",currency:text(formData,"currency").toUpperCase(),timezone:APP_TIME_ZONE,startingBalance:text(formData,"startingBalance")||"0",weekStartsOn:Number(text(formData,"weekStartsOn")||1)}});revalidatePath("/app/settings");revalidatePath("/app","layout")}
 export async function toggleAccountArchive(formData:FormData){const uid=await userId(),id=text(formData,"id"),archived=text(formData,"archived")==="true";await db.tradingAccount.updateMany({where:{id,userId:uid},data:{archivedAt:archived?null:new Date()}});revalidatePath("/app/settings");revalidatePath("/app","layout")}
 
 export async function updateTrade(formData:FormData){
   const uid=await userId(),id=text(formData,"id"),accountId=text(formData,"accountId");
   const owned=await db.trade.findFirst({where:{id,account:{userId:uid}}});if(!owned)throw new Error("Trade not found");
   const account=await db.tradingAccount.findFirst({where:{id:accountId,userId:uid}});if(!account)throw new Error("Account not found");
-  const openedAt=new Date(text(formData,"openedAt")),closedAt=new Date(text(formData,"closedAt"));if(Number.isNaN(+openedAt)||Number.isNaN(+closedAt)||closedAt<openedAt)throw new Error("Invalid execution times");
+  const openedAt=fromNewYorkTime(text(formData,"openedAt")),closedAt=fromNewYorkTime(text(formData,"closedAt"));if(Number.isNaN(+openedAt)||Number.isNaN(+closedAt)||closedAt<openedAt)throw new Error("Invalid execution times");
   const hasBehavior=formData.has("behaviorReview"),requestedPlan=text(formData,"planId")||null,planDate=new Date(`${text(formData,"openedAt").slice(0,10)}T00:00:00.000Z`);
   const plan=hasBehavior&&requestedPlan?await db.tradePlan.findFirst({where:{id:requestedPlan,userId:uid,accountId,planDate}}):null;if(hasBehavior&&requestedPlan&&!plan)throw new Error("The selected daily plan does not match this account and trading day");
   const requestedPlaybook=text(formData,"playbookId")||plan?.playbookId||null;
@@ -138,7 +139,7 @@ export async function deletePlan(formData:FormData){const uid=await userId();awa
 export async function updatePlaybook(formData:FormData){const uid=await userId(),id=text(formData,"id");await db.playbook.updateMany({where:{id,userId:uid},data:{name:text(formData,"name"),description:text(formData,"description"),setupCriteria:text(formData,"setupCriteria"),invalidationRules:text(formData,"invalidationRules"),riskRules:text(formData,"riskRules"),entryChecklist:lines(formData,"entryChecklist"),exitChecklist:lines(formData,"exitChecklist"),examples:text(formData,"examples")}});revalidatePlaybooks();redirect(`/app/playbooks/${id}`)}
 export async function togglePlaybook(formData:FormData){const uid=await userId(),id=text(formData,"id"),active=text(formData,"active")==="true";await db.playbook.updateMany({where:{id,userId:uid},data:{isActive:!active}});revalidatePlaybooks()}
 export async function deletePlaybook(formData:FormData){const uid=await userId();await db.playbook.deleteMany({where:{id:text(formData,"id"),userId:uid}});revalidatePlaybooks()}
-export async function updateReview(formData:FormData){const uid=await userId(),id=text(formData,"id"),accountId=text(formData,"accountId")||null;if(!await db.review.findFirst({where:{id,userId:uid}}))throw new Error("Review not found");await db.review.update({where:{id},data:{accountId,period:text(formData,"period") as "DAILY"|"WEEKLY"|"MONTHLY",startsAt:new Date(`${text(formData,"startsAt")}T00:00:00Z`),endsAt:new Date(`${text(formData,"endsAt")}T23:59:59Z`),wins:text(formData,"wins"),mistakes:text(formData,"mistakes"),lessons:text(formData,"lessons"),goals:text(formData,"goals"),rating:Number(text(formData,"rating"))||null,notes:text(formData,"notes")}});revalidatePath("/app/reviews");redirect("/app/reviews")}
+export async function updateReview(formData:FormData){const uid=await userId(),id=text(formData,"id"),accountId=text(formData,"accountId")||null;if(!await db.review.findFirst({where:{id,userId:uid}}))throw new Error("Review not found");await db.review.update({where:{id},data:{accountId,period:text(formData,"period") as "DAILY"|"WEEKLY"|"MONTHLY",startsAt:newYorkDayStart(text(formData,"startsAt")),endsAt:newYorkDayEnd(text(formData,"endsAt")),wins:text(formData,"wins"),mistakes:text(formData,"mistakes"),lessons:text(formData,"lessons"),goals:text(formData,"goals"),rating:Number(text(formData,"rating"))||null,notes:text(formData,"notes")}});revalidatePath("/app/reviews");redirect("/app/reviews")}
 export async function deleteReview(formData:FormData){const uid=await userId();await db.review.deleteMany({where:{id:text(formData,"id"),userId:uid}});revalidatePath("/app/reviews")}
 export async function createTag(formData:FormData){const uid=await userId();await db.tag.upsert({where:{userId_name:{userId:uid,name:text(formData,"name")}},update:{color:text(formData,"color")||"#21c989"},create:{userId:uid,name:text(formData,"name"),color:text(formData,"color")||"#21c989"}});revalidatePath("/app/settings");revalidateTradeEntry()}
 export async function updateTag(formData:FormData){const uid=await userId();await db.tag.updateMany({where:{id:text(formData,"id"),userId:uid},data:{name:text(formData,"name"),color:text(formData,"color")}});revalidatePath("/app/settings");revalidateTradeEntry()}

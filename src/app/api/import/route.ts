@@ -12,7 +12,7 @@ export async function POST(req: Request) {
   if (!account) return Response.json({ error: "Account not found" }, { status: 404 });
   const source = await file.text(), fingerprint = randomUUID();
   let parsed;
-  try { parsed = parseTradeImport(source, { timezone: String(form.get("timezone") || account.timezone || "UTC"), strategySymbol: String(form.get("strategySymbol") || ""), assetClass: String(form.get("assetClass") || "STOCK"), multiplier: String(form.get("multiplier") || "1") }); }
+  try { parsed = parseTradeImport(source, { timezone: "America/New_York", strategySymbol: String(form.get("strategySymbol") || ""), assetClass: String(form.get("assetClass") || "STOCK"), multiplier: String(form.get("multiplier") || "1") }); }
   catch (error) { return Response.json({ error: error instanceof Error ? error.message : "Could not read this CSV" }, { status: 400 }); }
   if (!parsed.trades.length) return Response.json({ error: parsed.errors[0]?.message || "No valid trades were found", errors: parsed.errors }, { status: 400 });
   const userId = session.user.id;

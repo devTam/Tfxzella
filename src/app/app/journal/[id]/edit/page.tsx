@@ -5,6 +5,7 @@ import { deleteAttachment, updateTrade } from "@/app/actions";
 import { ScreenshotUpload } from "@/components/screenshot-upload";
 import { db } from "@/lib/db";
 import { accounts, viewer } from "@/lib/data";
+import { newYorkDateTimeValue } from "@/lib/time";
 
 const MISTAKES = ["FOMO", "Revenge trade", "Overtrading", "Moved stop", "Early exit", "Late entry", "Oversized"];
 const EMOTIONS = ["Calm", "Confident", "Hesitant", "Fearful", "Greedy", "Frustrated", "Revenge"];
@@ -22,7 +23,7 @@ export default async function EditTrade({ params }: { params: Promise<{ id: stri
   ]);
   if (!trade) notFound();
   cloudinary.config({ cloud_name: process.env.CLOUDINARY_CLOUD_NAME, api_key: process.env.CLOUDINARY_API_KEY, api_secret: process.env.CLOUDINARY_API_SECRET, secure: true });
-  const dt = (date: Date) => new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+  const dt = newYorkDateTimeValue;
   const selectedTags = new Set(trade.tags.map((tag) => tag.tagId));
 
   return <div className="content">

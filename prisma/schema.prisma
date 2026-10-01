@@ -123,7 +123,7 @@ model TradingAccount {
   name             String
   type             AccountType       @default(DEMO)
   currency         String            @default("USD")
-  timezone         String            @default("UTC")
+  timezone         String            @default("America/New_York")
   weekStartsOn     Int               @default(1)
   startingBalance  Decimal           @default(0) @db.Decimal(20, 4)
   archivedAt       DateTime?
