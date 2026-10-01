@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { updatePlan } from "@/app/actions";
 import { accounts,viewer } from "@/lib/data";
 import { db } from "@/lib/db";
+import { SubmitButton } from "@/components/confirm-submit-button";
 
 export default async function EditPlan({params}:{params:Promise<{id:string}>}){
   const u=await viewer(),{id}=await params;
@@ -12,7 +13,7 @@ export default async function EditPlan({params}:{params:Promise<{id:string}>}){
     <F l="Strategy"><select name="playbookId" defaultValue={x.playbookId||""}><option value="">No specific strategy</option>{playbooks.map(playbook=><option key={playbook.id} value={playbook.id}>{playbook.name}{playbook.isActive?"":" · archived"}</option>)}</select></F><F l="Market bias"><select name="marketBias" defaultValue={x.marketBias||"Neutral"}><option>Neutral</option><option>Bullish</option><option>Bearish</option></select></F>
     <F l="Risk budget"><input name="riskBudget" type="number" min="0" step="any" defaultValue={x.riskBudget?.toString()}/></F><F l="Maximum trades"><input name="maxTrades" type="number" min="1" step="1" defaultValue={x.maxTrades||undefined}/></F><F l="Watchlist"><input name="watchlist" defaultValue={x.watchlist.join(", ")}/></F>
     <F l="Thesis" full><textarea name="thesis" defaultValue={x.thesis||""}/></F><F l="News on the day" full><textarea name="newsOnDay" defaultValue={x.newsOnDay||""}/><span className="help">Changes are synchronized to every trade linked to this plan.</span></F>
-    <F l="Notes" full><textarea name="notes" defaultValue={x.notes||""}/></F><button className="btn">Save changes</button>
+    <F l="Notes" full><textarea name="notes" defaultValue={x.notes||""}/></F><SubmitButton className="btn" pendingLabel="Saving changes…" successMessage="Plan updated">Save changes</SubmitButton>
   </form></Page>;
 }
 function Page({title,children}:{title:string;children:React.ReactNode}){return <div className="content"><div className="page-head"><div><span className="eyebrow">Session preparation</span><h1>{title}</h1></div></div>{children}</div>}

@@ -7,6 +7,7 @@ import { db } from "@/lib/db";
 import { viewer } from "@/lib/data";
 import { duration, money } from "@/lib/format";
 import { PAGE_SIZE, pageCount, pageNumber } from "@/lib/pagination";
+import { SubmitButton } from "@/components/confirm-submit-button";
 
 export const metadata = { title: "Journal" };
 
@@ -26,7 +27,7 @@ export default async function Journal({searchParams}:{searchParams:Promise<{page
       <td>{trade.qualityGrade ? <span className={`grade grade-${trade.qualityGrade.toLowerCase()}`}>{trade.qualityGrade}</span> : "—"}</td>
       <td>{trade.followedPlan === true ? <span className="positive">On-plan</span> : trade.followedPlan === false ? <span className="negative">Off-plan</span> : "Not reviewed"}</td>
       <td className={Number(trade.netPnl) >= 0 ? "positive" : "negative"}><b>{money(trade.netPnl.toString(), trade.account.currency)}</b></td>
-      <td><div className="actions"><Link className="icon-btn" aria-label={`Review ${trade.instrument.symbol}`} href={`/app/journal/${trade.id}`}><Eye size={16}/></Link><Link className="icon-btn" aria-label={`Edit ${trade.instrument.symbol}`} href={`/app/journal/${trade.id}/edit`}><Pencil size={15}/></Link><form action={deleteTrade}><input type="hidden" name="id" value={trade.id}/><button className="btn danger">Delete</button></form></div></td>
+      <td><div className="actions"><Link className="icon-btn" aria-label={`Review ${trade.instrument.symbol}`} href={`/app/journal/${trade.id}`}><Eye size={16}/></Link><Link className="icon-btn" aria-label={`Edit ${trade.instrument.symbol}`} href={`/app/journal/${trade.id}/edit`}><Pencil size={15}/></Link><form action={deleteTrade}><input type="hidden" name="id" value={trade.id}/><SubmitButton className="btn danger" pendingLabel="Deleting…" successMessage="Trade deleted">Delete</SubmitButton></form></div></td>
     </ClickableTableRow>)}</tbody></table></div><Pagination page={page} total={total}/></> : <div className="empty">Your journal is ready for its first trade.</div>}</section>
   </div>;
 }

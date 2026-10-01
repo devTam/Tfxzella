@@ -1,11 +1,32 @@
 "use client";
+
+import { LoaderCircle } from "lucide-react";
 import { useState } from "react";
-export function ImportForm({accounts}:{accounts:{id:string;name:string}[]}){const[message,setMessage]=useState(""),[busy,setBusy]=useState(false);return <form className="card form-grid" onSubmit={async event=>{event.preventDefault();setBusy(true);setMessage("Reading and grouping trades…");try{const response=await fetch("/api/import",{method:"POST",body:new FormData(event.currentTarget)}),data=await response.json();if(!response.ok)setMessage(data.error||"Import failed");else{const skipped=data.errors?.length?` ${data.errors.length} row${data.errors.length===1?" was":"s were"} skipped.`:"";setMessage(`${data.imported} trade${data.imported===1?"":"s"} imported from ${String(data.format).replaceAll("-"," ")}.${skipped}`);window.location.reload()}}catch{setMessage("Import failed. Check your connection and try again.")}finally{setBusy(false)}}}>
-<div className="field"><label>Account</label><select name="accountId" required>{accounts.map(account=><option value={account.id} key={account.id}>{account.name}</option>)}</select></div>
-<div className="field"><label>Times shown in the CSV</label><input name="timezone" defaultValue="UTC" placeholder="e.g. America/New_York"/></div>
-<div className="field"><label>Strategy chart symbol <span className="help">(Strategy Tester only)</span></label><input name="strategySymbol" placeholder="e.g. NASDAQ:AAPL or ES1!"/></div>
-<div className="field"><label>Asset class</label><select name="assetClass"><option value="STOCK">Stock / crypto</option><option value="FUTURE">Future</option><option value="FOREX">Forex / CFD</option></select></div>
-<div className="field"><label>Point value / contract multiplier</label><input name="multiplier" type="number" min="0.00000001" step="any" defaultValue="1"/></div>
-<div className="field"><label>CSV file</label><input name="file" type="file" accept=".csv,text/csv" required/></div>
-<div className="full import-help"><strong>TradingView Paper Trading</strong><p>Upload either Trade History or Order History. Trade History is recommended because it includes completed trades and realized P&amp;L. Order History imports filled orders only and ignores cancelled orders.</p><p className="help">Activity Log and Balance History are supporting records and cannot reconstruct executions reliably. Set the timezone used in TradingView; timestamps with an explicit offset are preserved.</p><button className="btn" disabled={busy}>{busy?"Importing…":"Import trades"}</button>{message&&<p role="status">{message}</p>}</div>
-</form>}
+import { toast } from "sonner";
+
+export function ImportForm({accounts}:{accounts:{id:string;name:string}[]}){
+  const [message,setMessage]=useState(""),[busy,setBusy]=useState(false);
+  return <form className="card form-grid" onSubmit={async event=>{
+    event.preventDefault();setBusy(true);setMessage("Reading and grouping trades…");
+    const toastId=toast.loading("Importing trades…");
+    try{
+      const response=await fetch("/api/import",{method:"POST",body:new FormData(event.currentTarget)}),data=await response.json();
+      if(!response.ok){const error=data.error||"Import failed";setMessage(error);toast.error(error,{id:toastId});return}
+      const skipped=data.errors?.length?` ${data.errors.length} row${data.errors.length===1?" was":"s were"} skipped.`:"";
+      const result=`${data.imported} trade${data.imported===1?"":"s"} imported from ${String(data.format).replaceAll("-"," ")}.${skipped}`;
+      setMessage(result);
+      if(data.errors?.length)toast.warning(result,{id:toastId});else toast.success(result,{id:toastId});
+      window.location.reload();
+    }catch{
+      const error="Import failed. Check your connection and try again.";setMessage(error);toast.error(error,{id:toastId});
+    }finally{setBusy(false)}
+  }}>
+    <div className="field"><label>Account</label><select name="accountId" required>{accounts.map(account=><option value={account.id} key={account.id}>{account.name}</option>)}</select></div>
+    <input type="hidden" name="timezone" value="America/New_York"/>
+    <div className="field"><label>Strategy chart symbol <span className="help">(Strategy Tester only)</span></label><input name="strategySymbol" placeholder="e.g. NASDAQ:AAPL or ES1!"/></div>
+    <div className="field"><label>Asset class</label><select name="assetClass"><option value="STOCK">Stock / crypto</option><option value="FUTURE">Future</option><option value="FOREX">Forex / CFD</option></select></div>
+    <div className="field"><label>Point value / contract multiplier</label><input name="multiplier" type="number" min="0.00000001" step="any" defaultValue="1"/></div>
+    <div className="field"><label>CSV file</label><input name="file" type="file" accept=".csv,text/csv" required/></div>
+    <div className="full import-help"><strong>TradingView Paper Trading</strong><p>Upload either Trade History or Order History. Trade History is recommended because it includes completed trades and realized P&amp;L. Order History imports filled orders only and ignores cancelled orders.</p><p className="help">CSV times without an explicit offset are interpreted as New York time. Timestamps with an explicit offset preserve that instant.</p><button className="btn" disabled={busy}>{busy?<><LoaderCircle className="spin" size={16}/>Importing…</>:"Import trades"}</button>{message?<p role="status">{message}</p>:null}</div>
+  </form>;
+}

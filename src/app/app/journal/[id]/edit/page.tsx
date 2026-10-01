@@ -6,6 +6,7 @@ import { ScreenshotUpload } from "@/components/screenshot-upload";
 import { db } from "@/lib/db";
 import { accounts, viewer } from "@/lib/data";
 import { newYorkDateTimeValue } from "@/lib/time";
+import { SubmitButton } from "@/components/confirm-submit-button";
 
 const MISTAKES = ["FOMO", "Revenge trade", "Overtrading", "Moved stop", "Early exit", "Late entry", "Oversized"];
 const EMOTIONS = ["Calm", "Confident", "Hesitant", "Fearful", "Greedy", "Frustrated", "Revenge"];
@@ -63,9 +64,9 @@ export default async function EditTrade({ params }: { params: Promise<{ id: stri
       {trade.attachments.length ? <div className="field full"><label>Attached screenshots</label><div className="preview-grid">{trade.attachments.map((attachment, index) => {
         const url = cloudinary.url(attachment.objectKey, { type: "authenticated", sign_url: true, secure: true });
         const remove = deleteAttachment.bind(null, attachment.id);
-        return <div key={attachment.id}><div className="preview"><Image src={url} alt={`Trade screenshot ${index + 1}`} fill sizes="150px" unoptimized/></div><button type="submit" className="btn danger" formAction={remove}>Remove</button></div>;
+        return <div key={attachment.id}><div className="preview"><Image src={url} alt={`Trade screenshot ${index + 1}`} fill sizes="150px" unoptimized/></div><SubmitButton className="btn danger" formAction={remove} pendingLabel="Removing…" successMessage="Screenshot removed">Remove</SubmitButton></div>;
       })}</div></div> : null}
-      <ScreenshotUpload/><div className="full"><button className="btn">Save changes</button></div>
+      <ScreenshotUpload/><div className="full"><SubmitButton className="btn" pendingLabel="Saving changes…" successMessage="Trade updated">Save changes</SubmitButton></div>
     </form>
   </div>;
 }

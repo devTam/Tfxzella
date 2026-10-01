@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { ClipboardPaste, ImagePlus, LoaderCircle, X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
+import { toast } from "sonner";
 
 type Uploaded = { key: string; mimeType: string; size: number; preview: string };
 const ACCEPTED = ["image/png", "image/jpeg", "image/webp"];
@@ -42,16 +43,16 @@ export function ScreenshotUpload() {
   const uploadFiles = useCallback(async (files: File[]) => {
     if (busy || !files.length) return;
     const available = MAX_IMAGES - items.length;
-    if (available <= 0) { setError(`You can attach up to ${MAX_IMAGES} screenshots`); return; }
+    if (available <= 0) { const warning=`You can attach up to ${MAX_IMAGES} screenshots`;setError(warning);toast.warning(warning);return; }
     setError("");
     setBusy(true);
     try {
       const uploaded: Uploaded[] = [];
       for (const file of files.slice(0, available)) uploaded.push(await uploadOne(file));
       setItems((current) => [...current, ...uploaded]);
-      if (files.length > available) setError(`Only the first ${available} image${available === 1 ? "" : "s"} were added`);
+      if (files.length > available){const warning=`Only the first ${available} image${available === 1 ? "" : "s"} were added`;setError(warning);toast.warning(warning)}else toast.success(`${uploaded.length} screenshot${uploaded.length===1?"":"s"} uploaded`);
     } catch (uploadError) {
-      setError(uploadError instanceof Error ? uploadError.message : "Upload failed");
+      const message=uploadError instanceof Error ? uploadError.message : "Upload failed";setError(message);toast.error(message);
     } finally {
       setBusy(false);
     }

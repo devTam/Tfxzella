@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Download, LoaderCircle } from "lucide-react";
 import { toPng } from "html-to-image";
+import { toast } from "sonner";
 
 export function CalendarImageExport({month}:{month:string}){
   const [exporting,setExporting]=useState(false);
@@ -10,6 +11,7 @@ export function CalendarImageExport({month}:{month:string}){
     const calendar=document.getElementById("social-calendar");
     if(!calendar||exporting)return;
     setExporting(true);
+    const toastId=toast.loading("Creating calendar image…");
     try{
       await document.fonts.ready;
       calendar.classList.add("calendar-exporting");
@@ -29,7 +31,8 @@ export function CalendarImageExport({month}:{month:string}){
       link.download=`tfxzella-calendar-${month}.png`;
       link.href=dataUrl;
       link.click();
-    }finally{calendar.classList.remove("calendar-exporting");calendar.style.width="";calendar.style.maxWidth="";calendar.style.padding="";setExporting(false)}
+      toast.success("Calendar image downloaded",{id:toastId});
+    }catch(error){toast.error(error instanceof Error?error.message:"Could not create calendar image",{id:toastId})}finally{calendar.classList.remove("calendar-exporting");calendar.style.width="";calendar.style.maxWidth="";calendar.style.padding="";setExporting(false)}
   }
   return <button className="btn secondary" type="button" onClick={download} disabled={exporting}>{exporting?<LoaderCircle className="spin" size={16}/>:<Download size={16}/>} {exporting?"Creating image…":"Download image"}</button>;
 }
