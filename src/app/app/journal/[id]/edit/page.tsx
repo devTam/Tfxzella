@@ -7,8 +7,8 @@ import { db } from "@/lib/db";
 import { accounts, viewer } from "@/lib/data";
 import { newYorkDateTimeValue } from "@/lib/time";
 import { SubmitButton } from "@/components/confirm-submit-button";
+import { MistakeFields } from "@/components/mistake-fields";
 
-const MISTAKES = ["FOMO", "Revenge trade", "Overtrading", "Moved stop", "Early exit", "Late entry", "Oversized"];
 const EMOTIONS = ["Calm", "Confident", "Hesitant", "Fearful", "Greedy", "Frustrated", "Revenge"];
 const CONDITIONS = ["Trending", "Ranging", "High volatility", "Low volatility", "News-driven"];
 
@@ -56,7 +56,7 @@ export default async function EditTrade({ params }: { params: Promise<{ id: stri
       <Field label="Market condition"><select name="marketCondition" defaultValue={trade.marketCondition || ""}><option value="">Select condition</option>{CONDITIONS.map((value) => <option key={value}>{value}</option>)}</select></Field>
       <Field label="Setup note"><input name="setup" defaultValue={trade.setup || ""}/></Field>
       <details className="full optional-metrics"><summary>Optional edge metrics · MFE and MAE</summary><div className="form-grid section"><Field label="Best price reached"><input name="maximumFavorablePrice" type="number" min="0" step="any" defaultValue={trade.maximumFavorablePrice?.toString()}/></Field><Field label="Worst price reached"><input name="maximumAdversePrice" type="number" min="0" step="any" defaultValue={trade.maximumAdversePrice?.toString()}/></Field></div></details>
-      <div className="field full"><label>Mistakes</label><div className="choice-chips">{MISTAKES.map((mistake) => <label key={mistake}><input type="checkbox" name="mistakes" value={mistake} defaultChecked={trade.mistakes.includes(mistake)}/><span>{mistake}</span></label>)}</div></div>
+      <MistakeFields selected={trade.mistakes}/>
       {tags.length ? <div className="field full"><label>Custom tags</label><div className="choice-chips">{tags.map((tag) => <label key={tag.id}><input type="checkbox" name="tagIds" value={tag.id} defaultChecked={selectedTags.has(tag.id)}/><span style={{ borderColor: tag.color }}>{tag.name}</span></label>)}</div></div> : null}
       <div className="field full"><label>News on the day</label><textarea name="newsOnDay" defaultValue={trade.newsOnDay || ""} placeholder="Market-moving news or scheduled events relevant to this trade"/></div>
       <div className="field full"><label>One lesson from this trade</label><input name="lesson" defaultValue={trade.lesson || ""} placeholder="What will you repeat or change next time?"/></div>
