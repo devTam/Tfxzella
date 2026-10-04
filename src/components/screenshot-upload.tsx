@@ -7,9 +7,8 @@ import { toast } from "sonner";
 
 type Uploaded = { key: string; mimeType: string; size: number; preview: string };
 const ACCEPTED = ["image/png", "image/jpeg", "image/webp"];
-const MAX_IMAGES = 3;
 
-export function ScreenshotUpload() {
+export function ScreenshotUpload({ label = "Trade screenshots", maxImages = 3 }: { label?: string; maxImages?: number }) {
   const [items, setItems] = useState<Uploaded[]>([]);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -42,8 +41,8 @@ export function ScreenshotUpload() {
 
   const uploadFiles = useCallback(async (files: File[]) => {
     if (busy || !files.length) return;
-    const available = MAX_IMAGES - items.length;
-    if (available <= 0) { const warning=`You can attach up to ${MAX_IMAGES} screenshots`;setError(warning);toast.warning(warning);return; }
+    const available = maxImages - items.length;
+    if (available <= 0) { const warning=`You can attach up to ${maxImages} screenshot${maxImages === 1 ? "" : "s"}`;setError(warning);toast.warning(warning);return; }
     setError("");
     setBusy(true);
     try {
@@ -56,7 +55,7 @@ export function ScreenshotUpload() {
     } finally {
       setBusy(false);
     }
-  }, [busy, items.length, uploadOne]);
+  }, [busy, items.length, maxImages, uploadOne]);
 
   useEffect(() => {
     const handlePaste = (event: ClipboardEvent) => {
@@ -75,16 +74,16 @@ export function ScreenshotUpload() {
   }, [uploadFiles]);
 
   return <div className="field full">
-    <label>Trade screenshots</label>
+    <label>{label}</label>
     <div className={`paste-zone ${pasteActive ? "active" : ""}`}>
       <ClipboardPaste size={22}/>
       <div><strong>Paste a TradingView chart</strong><span>Copy the chart, return here, then press Cmd+V or Ctrl+V anywhere on the page.</span></div>
-      <label className="btn secondary" aria-disabled={busy || items.length >= MAX_IMAGES}>
+      <label className="btn secondary" aria-disabled={busy || items.length >= maxImages}>
         {busy ? <LoaderCircle className="spin" size={16}/> : <ImagePlus size={16}/>} {busy ? "Uploading…" : "Choose image"}
-        <input type="file" accept={ACCEPTED.join(",")} multiple hidden disabled={busy || items.length >= MAX_IMAGES} onChange={(event) => { const files = Array.from(event.target.files || []); if (files.length) void uploadFiles(files); event.target.value = ""; }}/>
+        <input type="file" accept={ACCEPTED.join(",")} multiple={maxImages > 1} hidden disabled={busy || items.length >= maxImages} onChange={(event) => { const files = Array.from(event.target.files || []); if (files.length) void uploadFiles(files); event.target.value = ""; }}/>
       </label>
     </div>
-    <span className="help">PNG, JPEG, or WebP · 5MB each · {items.length}/{MAX_IMAGES} attached</span>
+    <span className="help">PNG, JPEG, or WebP · 5MB each · {items.length}/{maxImages} attached</span>
     {error ? <p className="negative" role="alert">{error}</p> : null}
     <div className="preview-grid">{items.map((item, index) => <div className="preview" key={item.key}>
       <Image src={item.preview} alt={`Trade screenshot ${index + 1}`} fill unoptimized sizes="160px"/>
