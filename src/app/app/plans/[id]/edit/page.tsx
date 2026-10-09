@@ -3,13 +3,14 @@ import { updatePlan } from "@/app/actions";
 import { accounts,viewer } from "@/lib/data";
 import { db } from "@/lib/db";
 import { SubmitButton } from "@/components/confirm-submit-button";
+import { dateOnlyValue } from "@/lib/time";
 
 export default async function EditPlan({params}:{params:Promise<{id:string}>}){
   const u=await viewer(),{id}=await params;
   const [x,list,playbooks]=await Promise.all([db.tradePlan.findFirst({where:{id,userId:u.id}}),accounts(),db.playbook.findMany({where:{userId:u.id},orderBy:{name:"asc"}})]);
   if(!x)notFound();
   return <Page title="Edit daily plan"><form action={updatePlan} className="card form-grid plan-form"><input type="hidden" name="id" value={id}/>
-    <F l="Account"><select name="accountId" defaultValue={x.accountId}>{list.map(a=><option key={a.id} value={a.id}>{a.name}</option>)}</select></F><F l="Date"><input name="planDate" type="date" defaultValue={x.planDate.toISOString().slice(0,10)} required/></F>
+    <F l="Account"><select name="accountId" defaultValue={x.accountId}>{list.map(a=><option key={a.id} value={a.id}>{a.name}</option>)}</select></F><F l="Date"><input name="planDate" type="date" defaultValue={dateOnlyValue(x.planDate)} required/></F>
     <F l="Strategy"><select name="playbookId" defaultValue={x.playbookId||""}><option value="">No specific strategy</option>{playbooks.map(playbook=><option key={playbook.id} value={playbook.id}>{playbook.name}{playbook.isActive?"":" · archived"}</option>)}</select></F><F l="Market bias"><select name="marketBias" defaultValue={x.marketBias||"Neutral"}><option>Neutral</option><option>Bullish</option><option>Bearish</option></select></F>
     <F l="Risk budget"><input name="riskBudget" type="number" min="0" step="any" defaultValue={x.riskBudget?.toString()}/></F><F l="Maximum trades"><input name="maxTrades" type="number" min="1" step="1" defaultValue={x.maxTrades||undefined}/></F><F l="Watchlist" full><input name="watchlist" defaultValue={x.watchlist.join(", ")}/></F>
     <F l="Thesis" full><textarea name="thesis" defaultValue={x.thesis||""}/></F><F l="News on the day" full><textarea name="newsOnDay" defaultValue={x.newsOnDay||""}/><span className="help">Changes are synchronized to every trade linked to this plan.</span></F>

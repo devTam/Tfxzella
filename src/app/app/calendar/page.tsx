@@ -1,16 +1,17 @@
 import { addDays, endOfMonth, endOfWeek, format, startOfMonth, startOfWeek } from "date-fns";
-import { toZonedTime } from "date-fns-tz";
+import { formatInTimeZone } from "date-fns-tz";
 import { CalendarImageExport } from "@/components/calendar-image-export";
 import { db } from "@/lib/db";
 import { viewer } from "@/lib/data";
 import { money, pct } from "@/lib/format";
+import { APP_TIME_ZONE } from "@/lib/time";
 export const metadata={title:"Calendar"};
 type Day={date:Date;pnl:number;count:number;wins:number;currency:string};
 
 export default async function CalendarPage({searchParams}:{searchParams:Promise<{month?:string;account?:string}>}){
   const user=await viewer(),query=await searchParams,accountList=await db.tradingAccount.findMany({where:{userId:user.id,archivedAt:null},orderBy:{createdAt:"asc"}}),accountId=accountList.some(account=>account.id===query.account)?query.account:accountList[0]?.id,account=accountList.find(item=>item.id===accountId),requested=query.month?new Date(`${query.month}-01T12:00:00Z`):new Date(),start=startOfWeek(startOfMonth(requested),{weekStartsOn:1}),end=endOfWeek(endOfMonth(requested),{weekStartsOn:1});
   const trades=await db.trade.findMany({where:{account:{userId:user.id},accountId,source:"LIVE",deletedAt:null,closedAt:{gte:addDays(start,-1),lte:addDays(end,1)}},include:{account:true}}),days:Day[]=[];
-  for(let date=start;date<=end;date=addDays(date,1)){const key=format(date,"yyyy-MM-dd"),items=trades.filter(trade=>format(toZonedTime(trade.closedAt!,trade.account.timezone),"yyyy-MM-dd")===key);days.push({date:new Date(date),pnl:items.reduce((sum,trade)=>sum+Number(trade.netPnl),0),count:items.length,wins:items.filter(trade=>Number(trade.netPnl)>0).length,currency:account?.currency||"USD"})}
+  for(let date=start;date<=end;date=addDays(date,1)){const key=format(date,"yyyy-MM-dd"),items=trades.filter(trade=>formatInTimeZone(trade.closedAt!,APP_TIME_ZONE,"yyyy-MM-dd")===key);days.push({date:new Date(date),pnl:items.reduce((sum,trade)=>sum+Number(trade.netPnl),0),count:items.length,wins:items.filter(trade=>Number(trade.netPnl)>0).length,currency:account?.currency||"USD"})}
   const weeks=Array.from({length:days.length/7},(_,index)=>days.slice(index*7,index*7+7)),monthDays=days.filter(day=>day.date.getMonth()===requested.getMonth()),monthPnl=monthDays.reduce((sum,day)=>sum+day.pnl,0),tradingDays=monthDays.filter(day=>day.count),winningDays=tradingDays.filter(day=>day.pnl>0).length;
   const monthKey=format(requested,"yyyy-MM");
   return <div className="content"><div className="page-head"><div><span className="eyebrow">Calendar report</span><h1>{format(requested,"MMMM yyyy")}</h1><p>Daily results with automatic weekly and monthly rollups.</p></div><div className="actions"><form><input type="hidden" name="month" value={monthKey}/><select name="account" defaultValue={accountId} onChange={undefined}>{accountList.map(item=><option key={item.id} value={item.id}>{item.name}</option>)}</select><button className="btn secondary">View</button></form><CalendarImageExport month={monthKey}/><a className="btn secondary" href={`?month=${format(addDays(startOfMonth(requested),-1),"yyyy-MM")}&account=${accountId}`}>←</a><a className="btn secondary" href={`?month=${format(addDays(endOfMonth(requested),1),"yyyy-MM")}&account=${accountId}`}>→</a></div></div>

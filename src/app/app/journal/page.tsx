@@ -8,6 +8,7 @@ import { viewer } from "@/lib/data";
 import { duration, money } from "@/lib/format";
 import { PAGE_SIZE, pageCount, pageNumber } from "@/lib/pagination";
 import { SubmitButton } from "@/components/confirm-submit-button";
+import { formatNewYorkDateTime } from "@/lib/time";
 
 export const metadata = { title: "Journal" };
 
@@ -18,8 +19,8 @@ export default async function Journal({searchParams}:{searchParams:Promise<{page
   const trades = await db.trade.findMany({ where, include: { instrument: true, account: true, playbook: true }, orderBy: [{openedAt:"desc"},{id:"desc"}], skip:(page-1)*PAGE_SIZE, take:PAGE_SIZE });
   return <div className="content">
     <div className="page-head"><div><span className="eyebrow">Execution and behavior</span><h1>Trade journal</h1><p>Open any trade to review its execution, screenshots, process and lesson.</p></div><div className="actions"><Link className="btn secondary" href="/app/import"><Upload size={16}/>Import CSV</Link><Link className="btn" href="/app/journal/new"><Plus size={16}/>Log trade</Link></div></div>
-    <section className="card">{trades.length ? <><div className="table-wrap"><table className="table journal-table"><thead><tr><th>Date</th><th>Symbol</th><th>Strategy</th><th>SL / TP</th><th>Duration</th><th>Quality</th><th>Discipline</th><th>Result</th><th>Actions</th></tr></thead><tbody>{trades.map((trade) => <ClickableTableRow href={`/app/journal/${trade.id}`} label={`Review ${trade.instrument.symbol} trade from ${trade.openedAt.toLocaleString()}`} key={trade.id}>
-      <td>{trade.openedAt.toLocaleString()}</td>
+    <section className="card">{trades.length ? <><div className="table-wrap"><table className="table journal-table"><thead><tr><th>Date</th><th>Symbol</th><th>Strategy</th><th>SL / TP</th><th>Duration</th><th>Quality</th><th>Discipline</th><th>Result</th><th>Actions</th></tr></thead><tbody>{trades.map((trade) => <ClickableTableRow href={`/app/journal/${trade.id}`} label={`Review ${trade.instrument.symbol} trade from ${formatNewYorkDateTime(trade.openedAt)}`} key={trade.id}>
+      <td>{formatNewYorkDateTime(trade.openedAt)}</td>
       <td><b>{trade.instrument.symbol}</b><div className="help">{trade.direction} · {trade.quantity.toString()}</div></td>
       <td>{trade.playbook?.name || trade.setup || "Unassigned"}</td>
       <td><span className="negative">{trade.stopLossPoints ? `${trade.stopLossPoints.toString()} pts` : "—"}</span><div className="help positive">{trade.takeProfitPoints ? `${trade.takeProfitPoints.toString()} pts` : "—"}</div></td>

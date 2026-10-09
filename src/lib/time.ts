@@ -31,6 +31,16 @@ export function formatNewYorkDateTime(value: Date): string {
   return new Intl.DateTimeFormat("en-US", { dateStyle: "short", timeStyle: "short", timeZone: APP_TIME_ZONE }).format(value);
 }
 
+/** Format a database date-only value without applying a timezone conversion. */
+export function formatDateOnly(value: Date): string {
+  return new Intl.DateTimeFormat("en-US", { dateStyle: "short", timeZone: "UTC" }).format(value);
+}
+
+/** Return the YYYY-MM-DD value of a database date-only field without conversion. */
+export function dateOnlyValue(value: Date): string {
+  return value.toISOString().slice(0, 10);
+}
+
 export function newYorkDayStart(value: string): Date {
   return fromNewYorkTime(`${value}T00:00:00`);
 }

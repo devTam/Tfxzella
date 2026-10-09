@@ -5,7 +5,7 @@ import { deleteAttachment, updateTrade } from "@/app/actions";
 import { ScreenshotUpload } from "@/components/screenshot-upload";
 import { db } from "@/lib/db";
 import { accounts, viewer } from "@/lib/data";
-import { newYorkDateTimeValue } from "@/lib/time";
+import { dateOnlyValue, newYorkDateTimeValue } from "@/lib/time";
 import { SubmitButton } from "@/components/confirm-submit-button";
 import { MistakeFields } from "@/components/mistake-fields";
 
@@ -46,7 +46,7 @@ export default async function EditTrade({ params }: { params: Promise<{ id: stri
       <Field label="Fees"><input name="fees" type="number" step="any" min="0" defaultValue={trade.fees.toString()}/></Field>
       <Field label="Initial risk"><input name="initialRisk" type="number" step="any" min="0" defaultValue={trade.initialRisk?.toString()}/></Field>
       <div className="full section"><h2>Post-trade review</h2><p className="help">Judge the process separately from the profit or loss.</p></div>
-      <Field label="Daily plan"><select name="planId" defaultValue={trade.planId || ""}><option value="">No daily plan</option>{plans.map((plan) => <option key={plan.id} value={plan.id}>{plan.planDate.toISOString().slice(0,10)} · {plan.account.name} · {plan.marketBias||"Neutral"}</option>)}</select></Field>
+      <Field label="Daily plan"><select name="planId" defaultValue={trade.planId || ""}><option value="">No daily plan</option>{plans.map((plan) => <option key={plan.id} value={plan.id}>{dateOnlyValue(plan.planDate)} · {plan.account.name} · {plan.marketBias||"Neutral"}</option>)}</select></Field>
       <Field label="Strategy"><select name="playbookId" defaultValue={trade.playbookId || ""}><option value="">Off-plan / no strategy</option>{playbooks.map((playbook) => <option key={playbook.id} value={playbook.id}>{playbook.name}{playbook.isActive?"":" · archived"}</option>)}</select></Field>
       <details className="full optional-metrics" open><summary>Plan for this trade</summary><div className="form-grid section"><Field label="Planned entry"><input name="plannedEntry" type="number" min="0" step="any" defaultValue={trade.plannedEntry?.toString()}/></Field><Field label="Planned stop"><input name="plannedStop" type="number" min="0" step="any" defaultValue={trade.plannedStop?.toString()}/></Field><Field label="Planned target"><input name="plannedTarget" type="number" min="0" step="any" defaultValue={trade.plannedTarget?.toString()}/></Field><div className="field full"><label>Entry conditions</label><textarea name="entryConditions" defaultValue={trade.entryConditions||""}/></div><Field label="Stop plan"><input name="stopPlan" defaultValue={trade.stopPlan||""}/></Field><Field label="Target plan"><input name="targetPlan" defaultValue={trade.targetPlan||""}/></Field></div></details>
       <Field label="Trade quality"><select name="qualityGrade" defaultValue={trade.qualityGrade || ""}><option value="">Not graded</option><option value="A">A · Textbook</option><option value="B">B · Valid, minor flaws</option><option value="C">C · Low quality</option></select></Field>
