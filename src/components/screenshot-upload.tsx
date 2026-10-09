@@ -6,10 +6,12 @@ import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 
 type Uploaded = { key: string; mimeType: string; size: number; preview: string };
+export type InitialScreenshot = Uploaded;
 const ACCEPTED = ["image/png", "image/jpeg", "image/webp"];
+const EMPTY_INITIAL_IMAGES: InitialScreenshot[] = [];
 
-export function ScreenshotUpload({ label = "Trade screenshots", maxImages = 3 }: { label?: string; maxImages?: number }) {
-  const [items, setItems] = useState<Uploaded[]>([]);
+export function ScreenshotUpload({ label = "Trade screenshots", maxImages = 3, initialImages = EMPTY_INITIAL_IMAGES }: { label?: string; maxImages?: number; initialImages?: InitialScreenshot[] }) {
+  const [items, setItems] = useState<Uploaded[]>(initialImages);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [pasteActive, setPasteActive] = useState(false);

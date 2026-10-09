@@ -11,6 +11,7 @@ import { v2 as cloudinary } from "cloudinary";
 import { calculateCommission } from "@/lib/fees";
 import { APP_TIME_ZONE, formatNewYorkDate, fromNewYorkTime, newYorkDayEnd, newYorkDayStart } from "@/lib/time";
 import { normalizeMistakes } from "@/lib/trade-mistakes";
+import { buildHindsightTrade } from "@/lib/review-hindsight";
 
 async function userId(){ const s=await auth(); if(!s?.user?.id) redirect("/login"); return s.user.id; }
 const text=(fd:FormData,k:string)=>String(fd.get(k)??"").trim();
@@ -102,11 +103,8 @@ export async function createReview(formData:FormData){
   if(accountId&&!await db.tradingAccount.findFirst({where:{id:accountId,userId:uid}}))throw new Error("Account not found");
   const startsAt=newYorkDayStart(text(formData,"startsAt")),endsAt=newYorkDayEnd(period==="DAILY"?text(formData,"startsAt"):text(formData,"endsAt"));
   const trades=await db.trade.findMany({where:{account:{userId:uid},accountId:accountId||undefined,source:"LIVE",deletedAt:null,closedAt:{gte:startsAt,lte:endsAt}},orderBy:{netPnl:"desc"}});
-  const hindsightDirection=text(formData,"hindsightDirection");
-  if(hindsightDirection&&!['LONG','SHORT','NO_TRADE'].includes(hindsightDirection))throw new Error("Invalid hindsight trade direction");
   const [hindsightImage]=attachments(formData);
-  if(hindsightImage&&!hindsightImage.objectKey.startsWith(`tfxzella/users/${uid}/`))throw new Error("Invalid hindsight image");
-  const hindsightTrade=period==="DAILY"&&(["hindsightSymbol","hindsightDirection","hindsightEntryTime","hindsightRationale"].some(key=>text(formData,key))||hindsightImage)?{symbol:text(formData,"hindsightSymbol").toUpperCase()||null,direction:hindsightDirection||null,entryTime:text(formData,"hindsightEntryTime")||null,image:hindsightImage||null,rationale:text(formData,"hindsightRationale")||null}:null;
+  const hindsightTrade=buildHindsightTrade({period,symbol:text(formData,"hindsightSymbol"),direction:text(formData,"hindsightDirection"),entryTime:text(formData,"hindsightEntryTime"),rationale:text(formData,"hindsightRationale"),image:hindsightImage,userId:uid});
   const summary=calculateMetrics(trades.map(t=>({netPnl:t.netPnl.toString(),grossPnl:t.grossPnl.toString(),fees:t.fees.toString(),closedAt:t.closedAt})));
   const durationOf=(t:typeof trades[number])=>t.closedAt?Math.max(0,t.closedAt.getTime()-t.openedAt.getTime()):0,avg=(values:number[])=>values.length?values.reduce((sum,n)=>sum+n,0)/values.length:0;
   const reviewed=trades.filter(t=>t.followedPlan!==null),mistakeCounts=trades.flatMap(t=>t.mistakes).reduce<Record<string,number>>((all,mistake)=>(all[mistake]=(all[mistake]||0)+1,all),{});
@@ -146,7 +144,15 @@ export async function deletePlan(formData:FormData){const uid=await userId();awa
 export async function updatePlaybook(formData:FormData){const uid=await userId(),id=text(formData,"id");await db.playbook.updateMany({where:{id,userId:uid},data:{name:text(formData,"name"),description:text(formData,"description"),setupCriteria:text(formData,"setupCriteria"),invalidationRules:text(formData,"invalidationRules"),riskRules:text(formData,"riskRules"),entryChecklist:lines(formData,"entryChecklist"),exitChecklist:lines(formData,"exitChecklist"),examples:text(formData,"examples")}});revalidatePlaybooks();redirect(`/app/playbooks/${id}`)}
 export async function togglePlaybook(formData:FormData){const uid=await userId(),id=text(formData,"id"),active=text(formData,"active")==="true";await db.playbook.updateMany({where:{id,userId:uid},data:{isActive:!active}});revalidatePlaybooks()}
 export async function deletePlaybook(formData:FormData){const uid=await userId();await db.playbook.deleteMany({where:{id:text(formData,"id"),userId:uid}});revalidatePlaybooks()}
-export async function updateReview(formData:FormData){const uid=await userId(),id=text(formData,"id"),accountId=text(formData,"accountId")||null;if(!await db.review.findFirst({where:{id,userId:uid}}))throw new Error("Review not found");await db.review.update({where:{id},data:{accountId,period:text(formData,"period") as "DAILY"|"WEEKLY"|"MONTHLY",startsAt:newYorkDayStart(text(formData,"startsAt")),endsAt:newYorkDayEnd(text(formData,"endsAt")),wins:text(formData,"wins"),mistakes:text(formData,"mistakes"),lessons:text(formData,"lessons"),goals:text(formData,"goals"),rating:Number(text(formData,"rating"))||null,notes:text(formData,"notes")}});revalidatePath("/app/reviews");redirect("/app/reviews")}
+export async function updateReview(formData:FormData){
+  const uid=await userId(),id=text(formData,"id"),accountId=text(formData,"accountId")||null,period=text(formData,"period") as "DAILY"|"WEEKLY"|"MONTHLY";
+  const review=await db.review.findFirst({where:{id,userId:uid}});if(!review)throw new Error("Review not found");
+  if(accountId&&!await db.tradingAccount.findFirst({where:{id:accountId,userId:uid}}))throw new Error("Account not found");
+  const [hindsightImage]=attachments(formData),hindsightTrade=buildHindsightTrade({period,symbol:text(formData,"hindsightSymbol"),direction:text(formData,"hindsightDirection"),entryTime:text(formData,"hindsightEntryTime"),rationale:text(formData,"hindsightRationale"),image:hindsightImage,userId:uid});
+  const metrics={...(review.metrics as Record<string,unknown>),hindsightTrade};
+  await db.review.update({where:{id},data:{accountId,period,startsAt:newYorkDayStart(text(formData,"startsAt")),endsAt:newYorkDayEnd(period==="DAILY"?text(formData,"startsAt"):text(formData,"endsAt")),metrics,wins:text(formData,"wins"),mistakes:text(formData,"mistakes"),lessons:text(formData,"lessons"),goals:text(formData,"goals"),rating:Number(text(formData,"rating"))||null,notes:text(formData,"notes")}});
+  revalidatePath("/app/reviews");revalidatePath(`/app/reviews/${id}`);redirect(`/app/reviews/${id}`)
+}
 export async function deleteReview(formData:FormData){const uid=await userId();await db.review.deleteMany({where:{id:text(formData,"id"),userId:uid}});revalidatePath("/app/reviews")}
 export async function createTag(formData:FormData){const uid=await userId();await db.tag.upsert({where:{userId_name:{userId:uid,name:text(formData,"name")}},update:{color:text(formData,"color")||"#21c989"},create:{userId:uid,name:text(formData,"name"),color:text(formData,"color")||"#21c989"}});revalidatePath("/app/settings");revalidateTradeEntry()}
 export async function updateTag(formData:FormData){const uid=await userId();await db.tag.updateMany({where:{id:text(formData,"id"),userId:uid},data:{name:text(formData,"name"),color:text(formData,"color")}});revalidatePath("/app/settings");revalidateTradeEntry()}
