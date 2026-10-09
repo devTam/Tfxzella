@@ -60,3 +60,5 @@ input[type="checkbox"],input[type="radio"],input[type="color"],input[type="hidde
 @media(max-width:560px){.loading-grid{grid-template-columns:1fr}.form-footer{align-items:stretch;flex-direction:column}.form-footer .btn{width:100%}}
 .btn[data-pending="true"],.icon-btn[data-pending="true"]{pointer-events:none;cursor:wait;opacity:.78}
 .btn[data-pending="true"]::before,.icon-btn[data-pending="true"]::before{content:"";width:14px;height:14px;flex:0 0 auto;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:spin .7s linear infinite}
+.plans-layout{grid-template-columns:minmax(0,1.45fr) minmax(320px,.75fr);align-items:start}.plan-form{align-items:start}.plan-form .field{min-width:0}.plan-form input,.plan-form select{min-width:0}.plan-form textarea{min-height:112px}.plan-form .form-footer{padding-top:2px}.plans-layout>section{min-width:0}.plans-layout .compact-card{display:grid;gap:8px}.plans-layout .compact-card p{margin:0}.plans-layout .compact-card small{display:block;color:var(--muted);overflow-wrap:anywhere}
+@media(max-width:1000px){.plans-layout{grid-template-columns:1fr}}

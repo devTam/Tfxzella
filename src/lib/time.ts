@@ -11,6 +11,10 @@ export function newYorkDateKey(value: Date = new Date()): string {
   return formatInTimeZone(value, APP_TIME_ZONE, "yyyy-MM-dd");
 }
 
+export function isSameTradingDay(value: Date, reference: Date = new Date(), timeZone = APP_TIME_ZONE): boolean {
+  return formatInTimeZone(value, timeZone, "yyyy-MM-dd") === formatInTimeZone(reference, timeZone, "yyyy-MM-dd");
+}
+
 export function newYorkDateTimeValue(value: Date = new Date()): string {
   return formatInTimeZone(value, APP_TIME_ZONE, "yyyy-MM-dd'T'HH:mm");
 }

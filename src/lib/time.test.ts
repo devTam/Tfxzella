@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fromNewYorkTime, newYorkDateKey, newYorkDateTimeValue } from "./time";
+import { fromNewYorkTime, isSameTradingDay, newYorkDateKey, newYorkDateTimeValue } from "./time";
 
 describe("New York time policy", () => {
   it("interprets winter and summer wall-clock times with DST", () => {
@@ -11,5 +11,11 @@ describe("New York time policy", () => {
     const instant = new Date("2026-10-02T02:30:00.000Z");
     expect(newYorkDateKey(instant)).toBe("2026-10-01");
     expect(newYorkDateTimeValue(instant)).toBe("2026-10-01T22:30");
+  });
+
+  it("compares trading days in the account timezone", () => {
+    const now = new Date("2026-10-02T02:30:00.000Z");
+    expect(isSameTradingDay(new Date("2026-10-01T14:00:00.000Z"), now, "America/New_York")).toBe(true);
+    expect(isSameTradingDay(new Date("2026-10-02T05:00:00.000Z"), now, "America/New_York")).toBe(false);
   });
 });
