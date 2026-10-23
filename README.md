@@ -19,3 +19,15 @@ For screenshots, configure `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, and `C
 ## CSV format
 
 Imports accept up to 5,000 rows / 5MB. Required headers: `symbol,direction,quantity,entry,exit,openedAt,closedAt`. Optional headers: `assetClass,multiplier,fees,setup,newsOnDay,notes`.
+
+## Trader workflow
+
+The sidebar follows the daily routine: **Today & overview → Daily bias & plans → Trade journal → Reviews**. Reports, calendar, strategies, and backtesting live under **Study & improve**; imports and settings remain under **Manage**. Mobile navigation shows four daily destinations and a More menu for every other tool.
+
+- The session workspace selects an account and New York trading date, carries forward the most recent prior review goal, and links directly to preparation, trade entry, unfinished reflection, and the daily review.
+- Daily bias supports expectation chart uploads and a comparison with actual trades. Reviews show matching original plans and charts before hindsight and reflection.
+- The journal filters by account, date, opened/closed date, and open or incomplete trades. Pagination preserves filters. A trade needs reflection when it is closed and lacks plan adherence or a lesson.
+- The latest 20 closed trades are compared with the preceding 20 for recorded plan adherence and reflection coverage. Sample sizes and missing data are shown explicitly; these are behavior measures, not a prediction of trading performance.
+- Calendar days open the corresponding session workspace. Existing reports, strategy tools, backtests, screenshots, hindsight reviews, imports, exports, and settings remain available.
+
+Bias comparison groups trades by **opening day**; review snapshots and the reflection queue use **closing day**. This distinction is displayed for overnight positions. Financial overview metrics use the selected account to avoid combining balances in different currencies.

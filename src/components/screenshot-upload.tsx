@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { ClipboardPaste, ImagePlus, LoaderCircle, X } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 type Uploaded = { key: string; mimeType: string; size: number; preview: string };
@@ -11,6 +11,7 @@ const ACCEPTED = ["image/png", "image/jpeg", "image/webp"];
 const EMPTY_INITIAL_IMAGES: InitialScreenshot[] = [];
 
 export function ScreenshotUpload({ label = "Trade screenshots", maxImages = 3, initialImages = EMPTY_INITIAL_IMAGES }: { label?: string; maxImages?: number; initialImages?: InitialScreenshot[] }) {
+  const containerRef = useRef<HTMLDivElement>(null);
   const [items, setItems] = useState<Uploaded[]>(initialImages);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -75,7 +76,20 @@ export function ScreenshotUpload({ label = "Trade screenshots", maxImages = 3, i
     return () => document.removeEventListener("paste", handlePaste);
   }, [uploadFiles]);
 
-  return <div className="field full">
+  useEffect(() => {
+    const form = containerRef.current?.closest("form");
+    const preventEarlySave = (event: Event) => {
+      if (busy) {
+        event.preventDefault();
+        event.stopPropagation();
+        toast.warning("Wait for your chart upload to finish before saving");
+      }
+    };
+    form?.addEventListener("submit", preventEarlySave, true);
+    return () => form?.removeEventListener("submit", preventEarlySave, true);
+  }, [busy]);
+
+  return <div className="field full" ref={containerRef}>
     <label>{label}</label>
     <div className={`paste-zone ${pasteActive ? "active" : ""}`}>
       <ClipboardPaste size={22}/>
@@ -88,7 +102,7 @@ export function ScreenshotUpload({ label = "Trade screenshots", maxImages = 3, i
     <span className="help">PNG, JPEG, or WebP · 5MB each · {items.length}/{maxImages} attached</span>
     {error ? <p className="negative" role="alert">{error}</p> : null}
     <div className="preview-grid">{items.map((item, index) => <div className="preview" key={item.key}>
-      <Image src={item.preview} alt={`Trade screenshot ${index + 1}`} fill unoptimized sizes="160px"/>
+      <Image src={item.preview} alt={`${label} ${index + 1}`} fill unoptimized sizes="160px"/>
       <button type="button" aria-label="Remove screenshot" onClick={() => { URL.revokeObjectURL(item.preview); setItems((current) => current.filter((image) => image.key !== item.key)); }}><X size={14}/></button>
       <input type="hidden" name="attachmentKey" value={item.key}/><input type="hidden" name="attachmentMime" value={item.mimeType}/><input type="hidden" name="attachmentSize" value={item.size}/>
     </div>)}</div>

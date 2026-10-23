@@ -2,9 +2,9 @@ import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { PAGE_SIZE, pageCount } from "@/lib/pagination";
 
-export function Pagination({ page, total, pageSize = PAGE_SIZE }: { page: number; total: number; pageSize?: number }) {
+export function Pagination({ page, total, pageSize = PAGE_SIZE, query = {} }: { page: number; total: number; pageSize?: number; query?: Record<string, string> }) {
   const pages = pageCount(total, pageSize);
-  const href = (next: number) => `?page=${next}`;
+  const href = (next: number) => `?${new URLSearchParams({...query,page:String(next)})}`;
   const first = total ? (page - 1) * pageSize + 1 : 0, last = Math.min(page * pageSize, total);
   return <nav className="pagination" aria-label="Table pagination">
     <span>{first.toLocaleString()}–{last.toLocaleString()} of {total.toLocaleString()}</span>

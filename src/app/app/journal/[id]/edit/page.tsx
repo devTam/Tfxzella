@@ -1,3 +1,6 @@
+import { TradeVideoField } from "@/components/trade-video-field";
+import { WorkflowNav } from "@/components/workflow-nav";
+import { newYorkDateKey } from "@/lib/time";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import { v2 as cloudinary } from "cloudinary";
@@ -27,7 +30,7 @@ export default async function EditTrade({ params }: { params: Promise<{ id: stri
   const dt = newYorkDateTimeValue;
   const selectedTags = new Set(trade.tags.map((tag) => tag.tagId));
 
-  return <div className="content">
+  return <div className="content">{trade.source==="LIVE"?<WorkflowNav current="trade" account={trade.accountId} date={newYorkDateKey(trade.openedAt)}/>:null}
     <div className="page-head"><div><span className="eyebrow">Correct and learn</span><h1>Edit {trade.instrument.symbol}</h1><p>Update both the execution and the decision behind it.</p></div></div>
     <form action={updateTrade} className="card form-grid">
       <input type="hidden" name="id" value={trade.id}/><input type="hidden" name="behaviorReview" value="1"/>
@@ -61,6 +64,7 @@ export default async function EditTrade({ params }: { params: Promise<{ id: stri
       <div className="field full"><label>News on the day</label><textarea name="newsOnDay" defaultValue={trade.newsOnDay || ""} placeholder="Market-moving news or scheduled events relevant to this trade"/></div>
       <div className="field full"><label>One lesson from this trade</label><input name="lesson" defaultValue={trade.lesson || ""} placeholder="What will you repeat or change next time?"/></div>
       <div className="field full"><label>Additional notes</label><textarea name="notes" defaultValue={trade.notes || ""}/></div>
+      <TradeVideoField defaultValue={trade.videoUrl}/>
       {trade.attachments.length ? <div className="field full"><label>Attached screenshots</label><div className="preview-grid">{trade.attachments.map((attachment, index) => {
         const url = cloudinary.url(attachment.objectKey, { type: "authenticated", sign_url: true, secure: true });
         const remove = deleteAttachment.bind(null, attachment.id);

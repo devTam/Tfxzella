@@ -1,3 +1,6 @@
+import { WorkflowNav } from "@/components/workflow-nav";
+import { ScreenshotUpload } from "@/components/screenshot-upload";
+import { chartImageUrl } from "@/lib/chart-images";
 import { notFound } from "next/navigation";
 import { updatePlan } from "@/app/actions";
 import { accounts,viewer } from "@/lib/data";
@@ -7,13 +10,15 @@ import { dateOnlyValue } from "@/lib/time";
 
 export default async function EditPlan({params}:{params:Promise<{id:string}>}){
   const u=await viewer(),{id}=await params;
-  const [x,list,playbooks]=await Promise.all([db.tradePlan.findFirst({where:{id,userId:u.id}}),accounts(),db.playbook.findMany({where:{userId:u.id},orderBy:{name:"asc"}})]);
+  const [x,list,playbooks]=await Promise.all([db.tradePlan.findFirst({where:{id,userId:u.id},include:{attachments:true}}),accounts(),db.playbook.findMany({where:{userId:u.id},orderBy:{name:"asc"}})]);
   if(!x)notFound();
-  return <Page title="Edit daily plan"><form action={updatePlan} className="card form-grid plan-form"><input type="hidden" name="id" value={id}/>
+  return <Page title="Edit daily bias & plan"><WorkflowNav current="prepare" account={x.accountId} date={dateOnlyValue(x.planDate)}/><form action={updatePlan} className="card form-grid plan-form"><input type="hidden" name="id" value={id}/>
     <F l="Account"><select name="accountId" defaultValue={x.accountId}>{list.map(a=><option key={a.id} value={a.id}>{a.name}</option>)}</select></F><F l="Date"><input name="planDate" type="date" defaultValue={dateOnlyValue(x.planDate)} required/></F>
     <F l="Strategy"><select name="playbookId" defaultValue={x.playbookId||""}><option value="">No specific strategy</option>{playbooks.map(playbook=><option key={playbook.id} value={playbook.id}>{playbook.name}{playbook.isActive?"":" · archived"}</option>)}</select></F><F l="Market bias"><select name="marketBias" defaultValue={x.marketBias||"Neutral"}><option>Neutral</option><option>Bullish</option><option>Bearish</option></select></F>
+    <div className="field full"><label htmlFor="drawOnLiquidity">Draw on Liquidity (DOL)</label><input id="drawOnLiquidity" name="drawOnLiquidity" defaultValue={x.drawOnLiquidity||""} placeholder="Liquidity pool or price level you expect price to move toward"/></div>
     <F l="Risk budget"><input name="riskBudget" type="number" min="0" step="any" defaultValue={x.riskBudget?.toString()}/></F><F l="Maximum trades"><input name="maxTrades" type="number" min="1" step="1" defaultValue={x.maxTrades||undefined}/></F><F l="Watchlist" full><input name="watchlist" defaultValue={x.watchlist.join(", ")}/></F>
     <F l="Thesis" full><textarea name="thesis" defaultValue={x.thesis||""}/></F><F l="News on the day" full><textarea name="newsOnDay" defaultValue={x.newsOnDay||""}/><span className="help">Changes are synchronized to every trade linked to this plan.</span></F>
+    <ScreenshotUpload label="Daily bias · expectation charts" initialImages={x.attachments.map(a=>({key:a.objectKey,mimeType:a.mimeType,size:a.size,preview:chartImageUrl(a.objectKey)}))}/>
     <F l="Notes" full><textarea name="notes" defaultValue={x.notes||""}/></F><div className="form-footer full"><SubmitButton className="btn" pendingLabel="Saving changes…" successMessage="Plan updated">Save changes</SubmitButton></div>
   </form></Page>;
 }

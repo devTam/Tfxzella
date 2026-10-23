@@ -1,0 +1,1 @@
+ALTER TABLE "Trade" ADD COLUMN "videoUrl" TEXT;
