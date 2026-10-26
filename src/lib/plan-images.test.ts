@@ -21,12 +21,12 @@ describe("daily bias chart validation", () => {
   it.each([["image/svg+xml", "100"], ["image/png", "5000001"], ["image/png", "0"], ["image/png", "NaN"], ["image/png", "1.5"]])("rejects invalid image metadata %s %s", (mime, size) => {
     expect(() => planImages(imageForm(undefined, mime, size), "user-1")).toThrow();
   });
-  it("rejects missing metadata and more than three charts", () => {
+  it("rejects missing metadata and more than ten charts", () => {
     const missing = imageForm();
     missing.delete("attachmentMime");
     expect(() => planImages(missing, "user-1")).toThrow();
     const tooMany = new FormData();
-    for (let i = 0; i < 4; i++) for (const [key, value] of imageForm(`tfxzella/users/user-1/chart-${i}`)) tooMany.append(key, value);
+    for (let i = 0; i < 11; i++) for (const [key, value] of imageForm(`tfxzella/users/user-1/chart-${i}`)) tooMany.append(key, value);
     expect(() => planImages(tooMany, "user-1")).toThrow();
   });
 });

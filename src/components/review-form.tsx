@@ -35,7 +35,7 @@ export function ReviewForm({ accounts, trades, initialDate, initialAccount = "",
         <Field label="Symbol"><input name="hindsightSymbol" placeholder="MNQ"/></Field>
         <Field label="Direction"><select name="hindsightDirection"><option value="">Select direction</option><option>LONG</option><option>SHORT</option><option>NO_TRADE</option></select></Field>
         <Field label="Entry time (New York)"><input name="hindsightEntryTime" type="time"/></Field>
-        <ScreenshotUpload label="Hindsight chart" maxImages={1}/>
+        <ScreenshotUpload label="Correct trade · hindsight charts"/>
         <Field label="What evidence supported this setup?" full><textarea name="hindsightRationale" placeholder="Describe the valid setup, confirmation, and invalidation."/></Field>
       </div></section>
     </> : null}

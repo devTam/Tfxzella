@@ -6,7 +6,7 @@ describe("buildHindsightTrade", () => {
 
   it("normalizes an editable daily hindsight trade and keeps its upload", () => {
     const image = { objectKey: "tfxzella/users/user-1/chart", mimeType: "image/png", size: 1200 };
-    expect(buildHindsightTrade({ ...base, image })).toEqual({ symbol: "MNQ", direction: "LONG", entryTime: "09:42", rationale: "Retest held", image });
+    expect(buildHindsightTrade({ ...base, image })).toEqual({ symbol: "MNQ", direction: "LONG", entryTime: "09:42", rationale: "Retest held", image, images: [image] });
   });
 
   it("removes the hindsight trade when every edit field and upload is cleared", () => {

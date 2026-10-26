@@ -1,3 +1,4 @@
+import { TradeChartGallery } from "@/components/trade-chart-gallery";
 import { WorkflowNav } from "@/components/workflow-nav";
 import { workflowHref } from "@/lib/workflow";
 import Image from "next/image";
@@ -56,7 +57,7 @@ export default async function PlanComparison({ params }: { params: Promise<{ id:
           <div className="detail-row"><span>Net P&amp;L{trade.status === "OPEN" ? " so far" : ""}</span><b>{money(trade.netPnl.toString(), plan.account.currency)}</b></div>
           <div className="detail-row"><span>Followed plan</span><b>{trade.followedPlan === null ? "Not reviewed" : trade.followedPlan ? "Yes" : "No"}</b></div>
           {trade.videoUrl ? <p><a className="btn secondary" href={trade.videoUrl} target="_blank" rel="noopener noreferrer">Watch trade video ↗</a></p> : null}
-          <Charts attachments={trade.attachments} label={`${trade.instrument.symbol} actual trade`} empty="No trade screenshots attached yet."/>
+          <TradeChartGallery attachments={trade.attachments}/>
           <p>{trade.lesson || "Compare your entry, direction, and exit with the expected chart, then record your lesson in the trade review."}</p>
           <Link className="btn secondary" href={`/app/journal/${trade.id}/edit`}>Review trade</Link>
         </article>)}</div> : <div className="empty">No trades recorded for this account and day yet. They will appear here as you journal them.</div>}

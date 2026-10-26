@@ -1,10 +1,9 @@
 import { WorkflowNav } from "@/components/workflow-nav";
 import { newYorkDateKey } from "@/lib/time";
-import Image from "next/image";
+import { TradeChartGallery } from "@/components/trade-chart-gallery";
 import Link from "next/link";
 import { ArrowLeft, Pencil } from "lucide-react";
 import { notFound } from "next/navigation";
-import { v2 as cloudinary } from "cloudinary";
 import Decimal from "decimal.js";
 import { db } from "@/lib/db";
 import { viewer } from "@/lib/data";
@@ -17,7 +16,6 @@ export default async function TradeReview({ params }: { params: Promise<{ id: st
   const { id } = await params;
   const trade = await db.trade.findFirst({ where: { id, account: { userId: user.id }, deletedAt: null }, include: { account: true, instrument: true, playbook: true, plan: true, tags: { include: { tag: true } }, executions: { orderBy: { executedAt: "asc" } }, attachments: true } });
   if (!trade) notFound();
-  cloudinary.config({ cloud_name: process.env.CLOUDINARY_CLOUD_NAME, api_key: process.env.CLOUDINARY_API_KEY, api_secret: process.env.CLOUDINARY_API_SECRET, secure: true });
   const hold = trade.closedAt ? trade.closedAt.getTime() - trade.openedAt.getTime() : null;
   const riskMultiple = trade.rMultiple ?? (trade.initialRisk && !trade.initialRisk.isZero() ? new Decimal(trade.netPnl).div(trade.initialRisk) : null);
   const processRating=processScore(trade),completeness=reviewCompleteness(trade),excursion=excursionMetrics(trade);
@@ -31,7 +29,7 @@ export default async function TradeReview({ params }: { params: Promise<{ id: st
     <div className="grid trade-detail-grid section">
       <div className="grid">
         <section className="card"><h2>Execution</h2><div className="detail-grid"><Detail label="Quantity" value={trade.quantity.toString()}/><Detail label="Entry" value={trade.averageEntry.toString()}/><Detail label="Exit" value={trade.averageExit?.toString() || "Open"}/><Detail label="Multiplier" value={trade.instrument.pointValue.toString()}/><Detail label="Gross P&L" value={money(trade.grossPnl.toString(), trade.account.currency)}/><Detail label="Fees" value={money(trade.fees.toString(), trade.account.currency)}/><Detail label="Return" value={trade.returnPercent ? pct(trade.returnPercent.toString()) : "—"}/><Detail label="Initial risk" value={trade.initialRisk ? money(trade.initialRisk.toString(), trade.account.currency) : "—"}/></div>{trade.executions.length ? <div className="execution-list section">{trade.executions.map((execution) => <div key={execution.id}><span className={`badge ${execution.side === "BUY" ? "positive" : "negative"}`}>{execution.side}</span><b>{execution.quantity.toString()} @ {execution.price.toString()}</b><span>{formatNewYorkDateTime(execution.executedAt)}</span></div>)}</div> : null}</section>
-        <section className="card"><h2>Trade recording & charts</h2>{trade.videoUrl?<p><a className="btn secondary" href={trade.videoUrl} target="_blank" rel="noopener noreferrer">Watch trade video ↗</a></p>:null}{trade.attachments.length ? <div className="trade-images">{trade.attachments.map((attachment, index) => {const url=cloudinary.url(attachment.objectKey, { type: "authenticated", sign_url: true, secure: true });return <a href={url} target="_blank" rel="noreferrer" key={attachment.id}><Image src={url} alt={`Chart screenshot ${index + 1}`} width={900} height={520} sizes="(max-width: 900px) 100vw, 700px" unoptimized/></a>})}</div> : <div className="empty">No chart screenshots were attached.</div>}</section>
+        <section className="card"><h2>Trade recording & charts</h2>{trade.videoUrl?<p><a className="btn secondary" href={trade.videoUrl} target="_blank" rel="noopener noreferrer">Watch trade video ↗</a></p>:null}<TradeChartGallery attachments={trade.attachments}/></section>
       </div>
       <aside className="grid review-sidebar">
         <section className="card"><h2>Process review</h2><Detail label="Strategy" value={trade.playbook?.name || trade.setup || "Unassigned"}/><Detail label="Plan" value={trade.followedPlan === true ? "Followed" : trade.followedPlan === false ? "Broken" : "Not reviewed"}/><Detail label="Emotion" value={trade.emotion || "Not recorded"}/><Detail label="Market" value={trade.marketCondition || "Not recorded"}/><Detail label="Hold time" value={hold===null?"Open":duration(hold)}/><Detail label="MFE" value={excursion?.mfePoints===null?"—":`${excursion?.mfePoints.toFixed(2)} pts`}/><Detail label="MAE" value={excursion?.maePoints===null?"—":`${excursion?.maePoints.toFixed(2)} pts`}/><Detail label="Exit efficiency" value={excursion?.exitEfficiency===null?"—":pct(excursion.exitEfficiency)}/><div className="section"><span className="stat-label">MISTAKES</span><div className="tag-row">{trade.mistakes.length ? trade.mistakes.map((mistake) => <span className="badge negative" key={mistake}>{mistake}</span>) : <span className="positive">No mistakes recorded</span>}</div></div>{trade.tags.length ? <div className="section"><span className="stat-label">TAGS</span><div className="tag-row">{trade.tags.map(({ tag }) => <span className="badge" style={{ borderColor: tag.color }} key={tag.id}>{tag.name}</span>)}</div></div> : null}</section>

@@ -1,11 +1,10 @@
 import { TradeVideoField } from "@/components/trade-video-field";
 import { WorkflowNav } from "@/components/workflow-nav";
 import { newYorkDateKey } from "@/lib/time";
-import Image from "next/image";
 import { notFound } from "next/navigation";
 import { v2 as cloudinary } from "cloudinary";
-import { deleteAttachment, updateTrade } from "@/app/actions";
-import { ScreenshotUpload } from "@/components/screenshot-upload";
+import { updateTrade } from "@/app/actions";
+import { TradeScreenshots } from "@/components/trade-screenshots";
 import { db } from "@/lib/db";
 import { accounts, viewer } from "@/lib/data";
 import { dateOnlyValue, newYorkDateTimeValue } from "@/lib/time";
@@ -65,12 +64,7 @@ export default async function EditTrade({ params }: { params: Promise<{ id: stri
       <div className="field full"><label>One lesson from this trade</label><input name="lesson" defaultValue={trade.lesson || ""} placeholder="What will you repeat or change next time?"/></div>
       <div className="field full"><label>Additional notes</label><textarea name="notes" defaultValue={trade.notes || ""}/></div>
       <TradeVideoField defaultValue={trade.videoUrl}/>
-      {trade.attachments.length ? <div className="field full"><label>Attached screenshots</label><div className="preview-grid">{trade.attachments.map((attachment, index) => {
-        const url = cloudinary.url(attachment.objectKey, { type: "authenticated", sign_url: true, secure: true });
-        const remove = deleteAttachment.bind(null, attachment.id);
-        return <div key={attachment.id}><div className="preview"><Image src={url} alt={`Trade screenshot ${index + 1}`} fill sizes="150px" unoptimized/></div><SubmitButton className="btn danger" formAction={remove} pendingLabel="Removing…" successMessage="Screenshot removed">Remove</SubmitButton></div>;
-      })}</div></div> : null}
-      <ScreenshotUpload/><div className="full"><SubmitButton className="btn" pendingLabel="Saving changes…" successMessage="Trade updated">Save changes</SubmitButton></div>
+      <TradeScreenshots initialImages={trade.attachments.map(image=>({key:image.objectKey,mimeType:image.mimeType,size:image.size,timeframe:image.timeframe,preview:cloudinary.url(image.objectKey,{type:"authenticated",sign_url:true,secure:true})}))}/><div className="full"><SubmitButton className="btn" pendingLabel="Saving changes…" successMessage="Trade updated">Save changes</SubmitButton></div>
     </form>
   </div>;
 }

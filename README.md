@@ -31,3 +31,9 @@ The sidebar follows the daily routine: **Today & overview → Daily bias & plans
 - Calendar days open the corresponding session workspace. Existing reports, strategy tools, backtests, screenshots, hindsight reviews, imports, exports, and settings remain available.
 
 Bias comparison groups trades by **opening day**; review snapshots and the reflection queue use **closing day**. This distinction is displayed for overnight positions. Financial overview metrics use the selected account to avoid combining balances in different currencies.
+
+### Chart screenshots
+
+Every chart uploader accepts multiple PNG, JPEG, or WebP files (up to 10 images per group, 5MB each). Trade entry and editing separate screenshots into HTF (Higher time frame), MTF (Middle time frame), and LTF (Lower time frame). Existing uncategorized trade screenshots remain visible and editable. Focus a specific upload area before pasting so the chart goes to that group only. Successful files are retained if another file in the batch fails.
+
+Daily bias and hindsight reviews support multiple charts. Older reviews with one hindsight image remain compatible. Screenshot changes in a trade edit are applied when saving the trade.

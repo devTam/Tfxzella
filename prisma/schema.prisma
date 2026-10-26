@@ -364,6 +364,12 @@ model Review {
   @@index([userId, startsAt])
 }
 
+enum ScreenshotTimeframe {
+  HTF
+  MTF
+  LTF
+}
+
 model Attachment {
   id        String     @id @default(cuid())
   userId    String
@@ -371,6 +377,7 @@ model Attachment {
   planId    String?
   reviewId  String?
   objectKey String
+  timeframe ScreenshotTimeframe?
   mimeType  String
   size      Int
   createdAt DateTime   @default(now())
