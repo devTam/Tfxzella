@@ -45,7 +45,7 @@ export default async function PlanComparison({ params }: { params: Promise<{ id:
       <h1>Daily bias vs actual trades</h1>
       <p>{formatDateOnly(plan.planDate)} · {plan.account.name} · New York trading day</p>
     </div><Link className="btn secondary" href={`/app/plans/${id}/edit`}>Edit daily bias</Link></div>
-    <aside className="practice-focus"><p>Compare what you expected with the decisions you made. Finish by choosing one action for your next session.</p><Link className="btn" href={workflowHref("/app/reviews",plan.accountId,day)}>Write daily review</Link></aside>
+    <aside className="practice-focus"><p>Compare what you expected with the decisions you made. Finish by choosing one action for your next session.</p>{reviews.length === 0 ? <Link className="btn" href={workflowHref("/app/reviews",plan.accountId,day)}>Write daily review</Link> : null}</aside>
     <div className="grid two">
       <div className="grid">
       <section className="card">
