@@ -8,6 +8,7 @@ import { db } from "@/lib/db";
 import { viewer } from "@/lib/data";
 import { chartImageUrl } from "@/lib/chart-images";
 import { money } from "@/lib/format";
+import { hindsightImages, type HindsightTrade } from "@/lib/review-hindsight";
 import { dateOnlyValue, formatDateOnly, formatNewYorkDateTime, newYorkDayEnd, newYorkDayStart } from "@/lib/time";
 
 export const metadata = { title: "Daily bias vs actual trades" };
@@ -21,6 +22,14 @@ export default async function PlanComparison({ params }: { params: Promise<{ id:
   });
   if (!plan) notFound();
   const day = dateOnlyValue(plan.planDate);
+  const reviews = await db.review.findMany({
+    where: {
+      userId: user.id, period: "DAILY",
+      OR: [{ accountId: plan.accountId }, { accountId: null }],
+      startsAt: newYorkDayStart(day), endsAt: newYorkDayEnd(day),
+    },
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+  });
   const trades = await db.trade.findMany({
     where: {
       accountId: plan.accountId, account: { userId: user.id }, deletedAt: null, source: "LIVE",
@@ -38,6 +47,7 @@ export default async function PlanComparison({ params }: { params: Promise<{ id:
     </div><Link className="btn secondary" href={`/app/plans/${id}/edit`}>Edit daily bias</Link></div>
     <aside className="practice-focus"><p>Compare what you expected with the decisions you made. Finish by choosing one action for your next session.</p><Link className="btn" href={workflowHref("/app/reviews",plan.accountId,day)}>Write daily review</Link></aside>
     <div className="grid two">
+      <div className="grid">
       <section className="card">
         <h2>Chart expectation</h2>
         <span className="badge">{plan.marketBias || "Neutral"}</span>
@@ -47,6 +57,21 @@ export default async function PlanComparison({ params }: { params: Promise<{ id:
         <Charts attachments={plan.attachments} label="Expected chart" empty="No expectation chart uploaded. Edit your daily bias to attach one."/>
         {plan.notes ? <p>{plan.notes}</p> : null}
       </section>
+      {reviews.map(review => {
+        const hindsight = (review.metrics as { hindsightTrade?: HindsightTrade | null }).hindsightTrade;
+        if (!hindsight) return null;
+        return <section className="card hindsight-summary" key={review.id}>
+          <span className="eyebrow">Daily review · {review.accountId ? plan.account.name : "All accounts"}</span>
+          <h2>Correct trade in hindsight</h2>
+          <div className="detail-row"><span>Symbol</span><b>{hindsight.symbol || "Not recorded"}</b></div>
+          <div className="detail-row"><span>Direction</span><b>{hindsight.direction === "NO_TRADE" ? "No trade" : hindsight.direction || "Not recorded"}</b></div>
+          <div className="detail-row"><span>Entry time</span><b>{hindsight.entryTime ? `${hindsight.entryTime} New York` : "Not recorded"}</b></div>
+          <Charts attachments={hindsightImages(hindsight).map((image, index) => ({ id: String(index), objectKey: image.objectKey }))} label="Correct trade in hindsight chart" empty="No hindsight chart uploaded."/>
+          <div className="review-text"><span className="stat-label">Why this was correct</span><p>{hindsight.rationale || "Not recorded."}</p></div>
+          <Link className="btn secondary" href={`/app/reviews/${review.id}`}>Open daily review</Link>
+        </section>;
+      })}
+      </div>
       <section className="card">
         <h2>Actual trades taken · {trades.length}</h2>
         <p className="help">Trades opened on this account during the day, including trades not linked to this plan. Backtests are excluded. Open trades are still in progress.</p>
