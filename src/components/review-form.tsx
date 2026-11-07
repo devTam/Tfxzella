@@ -6,12 +6,13 @@ import { useState } from "react";
 import { createReview } from "@/app/actions";
 import { SubmitButton } from "@/components/confirm-submit-button";
 import { ScreenshotUpload } from "@/components/screenshot-upload";
+import type { ReviewDay } from "@/lib/review-days";
 import { ReviewTrades, type ReviewTrade } from "@/components/review-trades";
 
 type Account = { id: string; name: string };
 
-type ReviewPlan = { id: string; accountId: string; accountName: string; day: string; bias: string | null; drawOnLiquidity: string | null; thesis: string | null; images: {id:string;url:string}[] };
-export function ReviewForm({ accounts, trades, initialDate, initialAccount = "", plans = [] }: { accounts: Account[]; trades: ReviewTrade[]; initialDate: string; initialAccount?: string; plans?: ReviewPlan[] }) {
+
+export function ReviewForm({ accounts, trades, initialDate, initialAccount = "", plans = [] }: { accounts: Account[]; trades: ReviewTrade[]; initialDate: string; initialAccount?: string; plans?: ReviewDay[] }) {
   const [period, setPeriod] = useState("DAILY");
   const [accountId, setAccountId] = useState(initialAccount);
   const [startsAt, setStartsAt] = useState(initialDate);
@@ -26,7 +27,7 @@ export function ReviewForm({ accounts, trades, initialDate, initialAccount = "",
     <Field label={period === "DAILY" ? "Trading day" : "Starts"}><input name="startsAt" type="date" value={startsAt} onChange={(event) => { const value = event.target.value; setStartsAt(value); if (period === "DAILY" || endsAt < value) setEndsAt(value); }} required/></Field>
     {period === "DAILY" ? <input name="endsAt" type="hidden" value={startsAt}/> : <Field label="Ends"><input name="endsAt" type="date" value={endsAt} min={startsAt} onChange={(event) => setEndsAt(event.target.value)} required/></Field>}
     <Field label="Rating (1–5)"><input name="rating" type="number" min="1" max="5"/></Field>
-    <section className="full review-expectations"><h3>Start with the original expectation</h3><p className="help">What did you anticipate, and did your execution respect the plan? Review charts before interpreting the outcome.</p>{matchingPlans.length?<div className="grid">{matchingPlans.map(plan=><article key={plan.id} className="trade-context"><b>{plan.day} · {plan.accountName} · {plan.bias||"Neutral"}</b><p>{plan.thesis||"No thesis recorded."}</p><p><b>DOL:</b> {plan.drawOnLiquidity||"Not recorded"}</p>{plan.images.length?<div className="expectation-thumbnails">{plan.images.map(image=><a key={image.id} href={image.url} target="_blank" rel="noreferrer"><Image src={image.url} alt={`${plan.day} expectation chart; open full size`} width={360} height={220} unoptimized/></a>)}</div>:null}<Link href={`/app/plans/${plan.id}`} target="_blank" rel="noreferrer">Compare expectation with trades ↗</Link></article>)}</div>:<p className="help">No daily bias saved for this period and account. You can still reflect on the session and prepare a bias next time.</p>}</section>
+    <section className="full review-expectations"><h3>Start with the original expectation</h3><p className="help">What did you anticipate, and did your execution respect the plan? Review charts before interpreting the outcome.</p>{matchingPlans.length?<div className="grid">{matchingPlans.map(plan=><article key={plan.id} className="trade-context"><b>{plan.day} · {plan.accountName} · {plan.hasBias ? plan.bias || "Neutral" : "No daily bias recorded"}</b><p>{plan.hasBias ? plan.thesis || "No thesis recorded." : "Review the saved charts and actual trades for this session."}</p>{plan.hasBias ? <p><b>DOL:</b> {plan.drawOnLiquidity||"Not recorded"}</p> : null}{plan.images.length?<div className="expectation-thumbnails">{plan.images.map(image=><a key={image.id} href={image.url} target="_blank" rel="noreferrer"><Image src={image.url} alt={`${plan.day} ${plan.hasBias ? "expectation" : "session"} chart; open full size`} width={360} height={220} unoptimized/></a>)}</div>:null}<Link href={plan.comparisonHref} target="_blank" rel="noreferrer">Compare expectation with trades ↗</Link></article>)}</div>:<p className="help">No daily bias, trades, or daily reviews saved for this period and account.</p>}</section>
     <ReviewTrades trades={trades} accountId={accountId} startsAt={startsAt} endsAt={period === "DAILY" ? startsAt : endsAt}/>
     {period === "DAILY" ? <>
 
