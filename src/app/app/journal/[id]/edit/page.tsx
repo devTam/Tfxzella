@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { TradeVideoField } from "@/components/trade-video-field";
 import { WorkflowNav } from "@/components/workflow-nav";
 import { newYorkDateKey } from "@/lib/time";
@@ -14,7 +15,7 @@ import { MistakeFields } from "@/components/mistake-fields";
 const EMOTIONS = ["Calm", "Confident", "Hesitant", "Fearful", "Greedy", "Frustrated", "Revenge"];
 const CONDITIONS = ["Trending", "Ranging", "High volatility", "Low volatility", "News-driven"];
 
-export default async function EditTrade({ params }: { params: Promise<{ id: string }> }) {
+export default async function EditTrade({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ importBatch?: string }> }) {
   const user = await viewer();
   const { id } = await params;
   const [trade, accountList, playbooks, plans, tags] = await Promise.all([
@@ -25,6 +26,11 @@ export default async function EditTrade({ params }: { params: Promise<{ id: stri
     db.tag.findMany({ where: { userId: user.id }, orderBy: { name: "asc" } }),
   ]);
   if (!trade) notFound();
+  const { importBatch } = await searchParams;
+  const batch = importBatch ? await db.importBatch.findFirst({ where: { id: importBatch, userId: user.id, status: "COMMITTED" } }) : null;
+  const mapping = batch?.mapping as { tradeIds?: unknown } | undefined;
+  const ids = Array.isArray(mapping?.tradeIds) ? mapping.tradeIds.filter((value): value is string => typeof value === "string") : [];
+  const position = ids.indexOf(id), nextId = position >= 0 ? ids[position + 1] : undefined;
   cloudinary.config({ cloud_name: process.env.CLOUDINARY_CLOUD_NAME, api_key: process.env.CLOUDINARY_API_KEY, api_secret: process.env.CLOUDINARY_API_SECRET, secure: true });
   const dt = newYorkDateTimeValue;
   const selectedTags = new Set(trade.tags.map((tag) => tag.tagId));
@@ -32,6 +38,7 @@ export default async function EditTrade({ params }: { params: Promise<{ id: stri
   return <div className="content">{trade.source==="LIVE"?<WorkflowNav current="trade" account={trade.accountId} date={newYorkDateKey(trade.openedAt)}/>:null}
     <div className="page-head"><div><span className="eyebrow">Correct and learn</span><h1>Edit {trade.instrument.symbol}</h1><p>Update both the execution and the decision behind it.</p></div></div>
     <form action={updateTrade} className="card form-grid">
+      {position >= 0 ? <div className="full"><h2>Imported trade {position + 1} of {ids.length}</h2><p>Execution details are prefilled. Check the prices, times and multiplier, add fees and complete your review. Saving continues to the next trade.</p><input type="hidden" name="importBatchId" value={batch!.id}/>{nextId ? <><input type="hidden" name="nextImportTradeId" value={nextId}/><Link href={`/app/journal/${nextId}/edit?importBatch=${batch!.id}`}>Complete this trade later · next trade →</Link></> : null}</div> : null}
       <input type="hidden" name="id" value={trade.id}/><input type="hidden" name="behaviorReview" value="1"/>
       <Field label="Account"><select name="accountId" defaultValue={trade.accountId}>{accountList.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}</select></Field>
       <Field label="Symbol"><input name="symbol" defaultValue={trade.instrument.symbol} required/></Field>
@@ -40,11 +47,11 @@ export default async function EditTrade({ params }: { params: Promise<{ id: stri
       <Field label="Quantity" help="Shares, contracts, or lots traded."><input name="quantity" type="number" step="any" min="0.00000001" defaultValue={trade.quantity.toString()} required/></Field>
       <Field label="Multiplier" help="Money value of a 1-point move per unit. MNQ is $2."><input name="multiplier" type="number" step="any" min="0.00000001" defaultValue={trade.instrument.pointValue.toString()} required/></Field>
       <Field label="Entry"><input name="entry" type="number" step="any" defaultValue={trade.averageEntry.toString()} required/></Field>
-      <Field label="Exit"><input name="exit" type="number" step="any" defaultValue={trade.averageExit?.toString()} required/></Field>
+      <Field label="Exit"><input name="exit" type="number" step="any" defaultValue={trade.averageExit?.toString()} required={Boolean(trade.closedAt)}/></Field>
       <Field label="Stop loss price" help={trade.stopLossPoints ? `${trade.stopLossPoints.toString()} points from entry` : "Distance is calculated automatically."}><input name="stopPrice" type="number" step="any" min="0.00000001" defaultValue={trade.stopPrice?.toString()}/></Field>
       <Field label="Take profit price" help={trade.takeProfitPoints ? `${trade.takeProfitPoints.toString()} points from entry` : "Distance is calculated automatically."}><input name="targetPrice" type="number" step="any" min="0.00000001" defaultValue={trade.targetPrice?.toString()}/></Field>
       <Field label="Opened"><input name="openedAt" type="datetime-local" defaultValue={dt(trade.openedAt)} required/></Field>
-      <Field label="Closed"><input name="closedAt" type="datetime-local" defaultValue={trade.closedAt ? dt(trade.closedAt) : ""} required/></Field>
+      <Field label="Closed"><input name="closedAt" type="datetime-local" defaultValue={trade.closedAt ? dt(trade.closedAt) : ""} required={Boolean(trade.closedAt)}/></Field>
       <Field label="Fees"><input name="fees" type="number" step="any" min="0" defaultValue={trade.fees.toString()}/></Field>
       <Field label="Initial risk"><input name="initialRisk" type="number" step="any" min="0" defaultValue={trade.initialRisk?.toString()}/></Field>
       <div className="full section"><h2>Post-trade review</h2><p className="help">Judge the process separately from the profit or loss.</p></div>
@@ -64,7 +71,7 @@ export default async function EditTrade({ params }: { params: Promise<{ id: stri
       <div className="field full"><label>One lesson from this trade</label><input name="lesson" defaultValue={trade.lesson || ""} placeholder="What will you repeat or change next time?"/></div>
       <div className="field full"><label>Additional notes</label><textarea name="notes" defaultValue={trade.notes || ""}/></div>
       <TradeVideoField defaultValue={trade.videoUrl}/>
-      <TradeScreenshots initialImages={trade.attachments.map(image=>({key:image.objectKey,mimeType:image.mimeType,size:image.size,timeframe:image.timeframe,preview:cloudinary.url(image.objectKey,{type:"authenticated",sign_url:true,secure:true})}))}/><div className="full"><SubmitButton className="btn" pendingLabel="Saving changes…" successMessage="Trade updated">Save changes</SubmitButton></div>
+      <TradeScreenshots initialImages={trade.attachments.map(image=>({key:image.objectKey,mimeType:image.mimeType,size:image.size,timeframe:image.timeframe,preview:cloudinary.url(image.objectKey,{type:"authenticated",sign_url:true,secure:true})}))}/><div className="full"><SubmitButton className="btn" pendingLabel="Saving changes…" successMessage="Trade updated">{position >= 0 ? nextId ? "Save & next trade" : "Save & finish import" : "Save changes"}</SubmitButton></div>
     </form>
   </div>;
 }

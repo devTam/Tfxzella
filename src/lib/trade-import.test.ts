@@ -6,3 +6,16 @@ describe("parseTradeImport",()=>{
  it("keeps supporting the native TFXZella format",()=>{const csv=`symbol,direction,quantity,entry,exit,openedAt,closedAt,fees\nEURUSD,SHORT,1,1.1,1.09,2026-01-02T10:00:00Z,2026-01-02T11:00:00Z,0`;const result=parseTradeImport(csv);expect(result.format).toBe("tfxzella");expect(result.trades[0].cycle.direction).toBe("SHORT")});
  it("imports news recorded for a native TFXZella trade",()=>{const csv=`symbol,direction,quantity,entry,exit,openedAt,closedAt,newsOnDay\nNQ,LONG,1,100,110,2026-01-02T10:00:00Z,2026-01-02T11:00:00Z,FOMC minutes`;const result=parseTradeImport(csv);expect(result.trades[0].newsOnDay).toBe("FOMC minutes")});
 });
+
+describe("Tradovate orders",()=>{
+ const header="Symbol,Side,Type,Qty,Remaining Qty,Filled Qty,Limit Price,Stop Price,Take Profit,Stop Loss,Avg Fill Price,Status,Update Time,Order ID,Expiry,Expiry Time";
+ it("groups newest-first fills and detects the MNQ multiplier",()=>{
+   const result=parseTradeImport(header+`\nMNQZ6,Buy,Limit,5,,,26389.25,,,,,Cancelled,2026-11-20 04:54:52,3,Day,\nMNQZ6,Buy,Stop,5,0,5,,26513.25,,,26513.35,Filled,2026-11-20 04:54:47,2,Day,\nMNQZ6,Sell,Market,5,0,5,,,,,26488.75,Filled,2026-11-20 04:51:14,1,Day,`);
+   expect(result.format).toBe("tradovate-orders");expect(result.errors).toEqual([]);expect(result.trades).toHaveLength(1);
+   const trade=result.trades[0];expect(trade.assetClass).toBe("FUTURE");expect(trade.multiplier).toBe("2");expect(trade.cycle.direction).toBe("SHORT");expect(trade.cycle.quantity.toString()).toBe("5");expect(trade.cycle.grossPnl.toNumber()).toBe(-246);expect(trade.cycle.openedAt.toISOString()).toBe("2026-11-20T09:51:14.000Z");
+ });
+ it("keeps partial fills on cancelled orders and reports invalid fills",()=>{
+   const result=parseTradeImport(header+`\nMNQZ6,Buy,Limit,5,3,2,100,,,,100,Cancelled,2026-11-20 04:00:00,1,Day,\nMNQZ6,Sell,Market,2,0,2,,,,,,Filled,2026-11-20 04:01:00,2,Day,`,{timezone:"UTC"});
+   expect(result.trades[0].cycle.status).toBe("OPEN");expect(result.trades[0].cycle.quantity.toString()).toBe("2");expect(result.trades[0].cycle.openedAt.toISOString()).toBe("2026-11-20T04:00:00.000Z");expect(result.errors[0].row).toBe(3);
+ });
+});

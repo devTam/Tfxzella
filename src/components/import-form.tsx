@@ -16,17 +16,17 @@ export function ImportForm({accounts}:{accounts:{id:string;name:string}[]}){
       const result=`${data.imported} trade${data.imported===1?"":"s"} imported from ${String(data.format).replaceAll("-"," ")}.${skipped}`;
       setMessage(result);
       if(data.errors?.length)toast.warning(result,{id:toastId});else toast.success(result,{id:toastId});
-      window.location.reload();
+      window.location.assign(data.reviewUrl);
     }catch{
       const error="Import failed. Check your connection and try again.";setMessage(error);toast.error(error,{id:toastId});
     }finally{setBusy(false)}
   }}>
     <div className="field"><label>Account</label><select name="accountId" required>{accounts.map(account=><option value={account.id} key={account.id}>{account.name}</option>)}</select></div>
-    <input type="hidden" name="timezone" value="America/New_York"/>
+    <div className="field"><label>CSV timezone</label><input name="timezone" defaultValue="America/New_York" required/><span className="help">Use the timezone configured in your export, for example America/New_York or UTC.</span></div>
     <div className="field"><label>Strategy chart symbol <span className="help">(Strategy Tester only)</span></label><input name="strategySymbol" placeholder="e.g. NASDAQ:AAPL or ES1!"/></div>
     <div className="field"><label>Asset class</label><select name="assetClass"><option value="STOCK">Stock / crypto</option><option value="FUTURE">Future</option><option value="FOREX">Forex / CFD</option></select></div>
     <div className="field"><label>Point value / contract multiplier</label><input name="multiplier" type="number" min="0.00000001" step="any" defaultValue="1"/></div>
     <div className="field"><label>CSV file</label><input name="file" type="file" accept=".csv,text/csv" required/></div>
-    <div className="full import-help"><strong>TradingView Paper Trading</strong><p>Upload either Trade History or Order History. Trade History is recommended because it includes completed trades and realized P&amp;L. Order History imports filled orders only and ignores cancelled orders.</p><p className="help">CSV times without an explicit offset are interpreted as New York time. Timestamps with an explicit offset preserve that instant.</p><button className="btn" disabled={busy}>{busy?<><LoaderCircle className="spin" size={16}/>Importing…</>:"Import trades"}</button>{message?<p role="status">{message}</p>:null}</div>
+    <div className="full import-help"><strong>Tradovate & TradingView</strong><p>Tradovate Orders CSVs use filled quantities and average fill prices. Opposite fills are grouped into trade records; cancelled unfilled orders are ignored. Known futures contract multipliers are detected automatically. Add commissions and review details after importing.</p><p>Upload either Trade History or Order History. Trade History is recommended because it includes completed trades and realized P&amp;L. Order History imports filled orders only and ignores cancelled orders.</p><p className="help">CSV times without an explicit offset use the timezone above. Timestamps with an explicit offset preserve that instant.</p><button className="btn" disabled={busy}>{busy?<><LoaderCircle className="spin" size={16}/>Importing…</>:"Import & complete trades"}</button>{message?<p role="status">{message}</p>:null}</div>
   </form>;
 }
