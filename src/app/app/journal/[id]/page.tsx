@@ -1,45 +1,36 @@
 import { WorkflowNav } from "@/components/workflow-nav";
-import { newYorkDateKey } from "@/lib/time";
-import { TradeChartGallery } from "@/components/trade-chart-gallery";
+import { BacktestTradeCard } from "@/components/backtest-trade-card";
 import Link from "next/link";
-import { ArrowLeft, Pencil } from "lucide-react";
+import { ArrowLeft, ChevronLeft, ChevronRight } from "lucide-react";
 import { notFound } from "next/navigation";
-import Decimal from "decimal.js";
 import { db } from "@/lib/db";
 import { viewer } from "@/lib/data";
-import { duration, money, pct } from "@/lib/format";
-import { formatDateOnly, formatNewYorkDateTime } from "@/lib/time";
-import { excursionMetrics, processScore, reviewCompleteness } from "@/lib/skill-metrics";
+import { formatNewYorkDateTime, newYorkDateKey } from "@/lib/time";
+import { adjacentTradeWhere, journalFilters, journalReviewHref, journalWhere, type JournalQuery } from "@/lib/journal-view";
 
-export default async function TradeReview({ params }: { params: Promise<{ id: string }> }) {
-  const user = await viewer();
-  const { id } = await params;
-  const trade = await db.trade.findFirst({ where: { id, account: { userId: user.id }, deletedAt: null }, include: { account: true, instrument: true, playbook: true, plan: true, tags: { include: { tag: true } }, executions: { orderBy: { executedAt: "asc" } }, attachments: true } });
+export default async function TradeReview({ params, searchParams }: { params: Promise<{ id: string }>; searchParams?: Promise<JournalQuery> }) {
+  const user = await viewer(), { id } = await params;
+  const filters = journalFilters(await searchParams || {});
+  const trade = await db.trade.findFirst({ where: { id, account: { userId: user.id }, deletedAt: null }, include: { account: true, instrument: true, playbook: true, plan: true, attachments: { orderBy: { createdAt: "asc" } } } });
   if (!trade) notFound();
-  const hold = trade.closedAt ? trade.closedAt.getTime() - trade.openedAt.getTime() : null;
-  const riskMultiple = trade.rMultiple ?? (trade.initialRisk && !trade.initialRisk.isZero() ? new Decimal(trade.netPnl).div(trade.initialRisk) : null);
-  const processRating=processScore(trade),completeness=reviewCompleteness(trade),excursion=excursionMetrics(trade);
-  const deviation=(actual:unknown,planned:unknown)=>actual===null||actual===undefined||planned===null||planned===undefined?"—":`${Number(actual)-Number(planned)>=0?"+":""}${(Number(actual)-Number(planned)).toFixed(2)} pts`;
-  const plannedRisk=trade.plannedEntry&&trade.plannedStop?Math.abs(Number(trade.plannedEntry)-Number(trade.plannedStop)):null,plannedReward=trade.plannedEntry&&trade.plannedTarget?Math.abs(Number(trade.plannedTarget)-Number(trade.plannedEntry)):null,plannedRewardRisk=plannedRisk&&plannedReward?plannedReward/plannedRisk:null;
-
-  return <div className="content trade-review">{trade.source==="LIVE"?<WorkflowNav current="trade" account={trade.accountId} date={newYorkDateKey(trade.openedAt)}/>:null}
-    <div className="page-head"><div><Link className="back-link" href={trade.backtestSessionId?`/app/backtests/${trade.backtestSessionId}`:"/app/journal"}><ArrowLeft size={15}/>{trade.backtestSessionId?"Back to session":"All trades"}</Link><span className="eyebrow">Trade review</span><h1>{trade.instrument.symbol} · {trade.direction}</h1><p>{formatNewYorkDateTime(trade.openedAt)} · {trade.account.name}</p></div><Link className="btn" href={`/app/journal/${trade.id}/edit`}><Pencil size={16}/>Edit review</Link></div>
-    <section className="trade-hero card"><div><span className="stat-label">NET P&amp;L</span><strong className={Number(trade.netPnl) >= 0 ? "positive" : "negative"}>{money(trade.netPnl.toString(), trade.account.currency)}</strong></div><ReviewMetric label="R-multiple" value={riskMultiple ? `${riskMultiple.toFixed(2)}R` : "Add initial risk"}/><ReviewMetric label="Process score" value={processRating===null?"Add review":`${processRating}%`}/><ReviewMetric label="Review complete" value={`${completeness}%`}/><ReviewMetric label="Confidence" value={trade.confidence?`${trade.confidence}/5`:"Not recorded"}/></section>
-    <section className="card section level-summary"><div><span className="stat-label">Stop loss</span><b>{trade.stopPrice?.toString() || "Not recorded"}</b><small>{trade.stopLossPoints ? `${trade.stopLossPoints.toString()} points from entry` : "—"}</small></div><div><span className="stat-label">Take profit</span><b>{trade.targetPrice?.toString() || "Not recorded"}</b><small>{trade.takeProfitPoints ? `${trade.takeProfitPoints.toString()} points from entry` : "—"}</small></div></section>
-    <div className="grid trade-detail-grid section">
-      <div className="grid">
-        <section className="card"><h2>Execution</h2><div className="detail-grid"><Detail label="Quantity" value={trade.quantity.toString()}/><Detail label="Entry" value={trade.averageEntry.toString()}/><Detail label="Exit" value={trade.averageExit?.toString() || "Open"}/><Detail label="Multiplier" value={trade.instrument.pointValue.toString()}/><Detail label="Gross P&L" value={money(trade.grossPnl.toString(), trade.account.currency)}/><Detail label="Fees" value={money(trade.fees.toString(), trade.account.currency)}/><Detail label="Return" value={trade.returnPercent ? pct(trade.returnPercent.toString()) : "—"}/><Detail label="Initial risk" value={trade.initialRisk ? money(trade.initialRisk.toString(), trade.account.currency) : "—"}/></div>{trade.executions.length ? <div className="execution-list section">{trade.executions.map((execution) => <div key={execution.id}><span className={`badge ${execution.side === "BUY" ? "positive" : "negative"}`}>{execution.side}</span><b>{execution.quantity.toString()} @ {execution.price.toString()}</b><span>{formatNewYorkDateTime(execution.executedAt)}</span></div>)}</div> : null}</section>
-        <section className="card"><h2>Trade recording & charts</h2>{trade.videoUrl?<p><a className="btn secondary" href={trade.videoUrl} target="_blank" rel="noopener noreferrer">Watch trade video ↗</a></p>:null}<TradeChartGallery attachments={trade.attachments}/></section>
-      </div>
-      <aside className="grid review-sidebar">
-        <section className="card"><h2>Process review</h2><Detail label="Strategy" value={trade.playbook?.name || trade.setup || "Unassigned"}/><Detail label="Plan" value={trade.followedPlan === true ? "Followed" : trade.followedPlan === false ? "Broken" : "Not reviewed"}/><Detail label="Emotion" value={trade.emotion || "Not recorded"}/><Detail label="Market" value={trade.marketCondition || "Not recorded"}/><Detail label="Hold time" value={hold===null?"Open":duration(hold)}/><Detail label="MFE" value={excursion?.mfePoints===null?"—":`${excursion?.mfePoints.toFixed(2)} pts`}/><Detail label="MAE" value={excursion?.maePoints===null?"—":`${excursion?.maePoints.toFixed(2)} pts`}/><Detail label="Exit efficiency" value={excursion?.exitEfficiency===null?"—":pct(excursion.exitEfficiency)}/><div className="section"><span className="stat-label">MISTAKES</span><div className="tag-row">{trade.mistakes.length ? trade.mistakes.map((mistake) => <span className="badge negative" key={mistake}>{mistake}</span>) : <span className="positive">No mistakes recorded</span>}</div></div>{trade.tags.length ? <div className="section"><span className="stat-label">TAGS</span><div className="tag-row">{trade.tags.map(({ tag }) => <span className="badge" style={{ borderColor: tag.color }} key={tag.id}>{tag.name}</span>)}</div></div> : null}</section>
-        <section className="card reflection-card"><h2>Reflection</h2><span className="stat-label">NEWS ON THE DAY</span><p>{trade.newsOnDay || "No market news recorded."}</p><span className="stat-label">LESSON</span><p>{trade.lesson || "No lesson recorded yet."}</p><span className="stat-label">NOTES</span><p>{trade.notes || "No additional notes."}</p></section>
-        <section className="card"><h2>Trade plan vs actual</h2><Detail label="Entry conditions" value={trade.entryConditions||"—"}/><Detail label="Planned entry" value={trade.plannedEntry?.toString()||"—"}/><Detail label="Actual entry" value={trade.averageEntry.toString()}/><Detail label="Entry deviation" value={deviation(trade.averageEntry,trade.plannedEntry)}/><Detail label="Planned stop" value={trade.plannedStop?.toString()||trade.stopPlan||"—"}/><Detail label="Actual stop" value={trade.stopPrice?.toString()||"—"}/><Detail label="Stop deviation" value={deviation(trade.stopPrice,trade.plannedStop)}/><Detail label="Planned target" value={trade.plannedTarget?.toString()||trade.targetPlan||"—"}/><Detail label="Actual target" value={trade.targetPrice?.toString()||"—"}/><Detail label="Target deviation" value={deviation(trade.targetPrice,trade.plannedTarget)}/><Detail label="Planned risk" value={plannedRisk===null?"—":`${plannedRisk.toFixed(2)} pts`}/><Detail label="Planned reward" value={plannedReward===null?"—":`${plannedReward.toFixed(2)} pts`}/><Detail label="Planned R:R" value={plannedRewardRisk===null?"—":`1:${plannedRewardRisk.toFixed(2)}`}/></section>
-        {trade.plan ? <section className="card"><h2>Daily session plan</h2><Link href={`/app/plans/${trade.plan.id}`} className="btn secondary">Compare daily bias with trades</Link><Detail label="Plan date" value={formatDateOnly(trade.plan.planDate)}/><Detail label="Bias" value={trade.plan.marketBias || "—"}/><Detail label="Thesis" value={trade.plan.thesis || "—"}/><Detail label="Draw on Liquidity (DOL)" value={trade.plan.drawOnLiquidity || "Not recorded"}/><Detail label="Risk budget" value={trade.plan.riskBudget ? money(trade.plan.riskBudget.toString(), trade.account.currency) : "—"}/><Detail label="Risk compliance" value={trade.plan.riskBudget&&trade.initialRisk?Number(trade.initialRisk)<=Number(trade.plan.riskBudget)?"Within budget":"Over budget":"—"}/><Detail label="Maximum trades" value={trade.plan.maxTrades?.toString()||"—"}/></section> : null}
-      </aside>
-    </div>
+  const live = trade.source === "LIVE";
+  const scope = live ? journalWhere(user.id, filters) : { account: { userId: user.id }, source: "BACKTEST" as const, backtestSessionId: trade.backtestSessionId, deletedAt: null };
+  const [previous, next] = await Promise.all([
+    db.trade.findFirst({ where: { AND: [scope, adjacentTradeWhere(trade, !live)] }, select: { id: true }, orderBy: [{ openedAt: live ? "asc" : "desc" }, { id: live ? "asc" : "desc" }] }),
+    db.trade.findFirst({ where: { AND: [scope, adjacentTradeWhere(trade, live)] }, select: { id: true }, orderBy: [{ openedAt: live ? "desc" : "asc" }, { id: live ? "desc" : "asc" }] }),
+  ]);
+  const href = (tradeId: string) => live ? journalReviewHref(tradeId, filters) : `/app/journal/${tradeId}`;
+  const back = trade.backtestSessionId ? `/app/backtests/${trade.backtestSessionId}` : `/app/journal?${new URLSearchParams(filters)}`;
+  return <div className="content trade-review">
+    {live ? <WorkflowNav current="trade" account={trade.accountId} date={newYorkDateKey(trade.openedAt)}/> : null}
+    <div className="page-head"><div><Link className="back-link" href={back}><ArrowLeft size={15}/>{live ? "All trades" : "Back to session"}</Link><span className="eyebrow">Trade review</span><h1>{trade.instrument.symbol} · {trade.direction}</h1><p>{formatNewYorkDateTime(trade.openedAt)} · {trade.account.name}</p></div></div>
+    <section className="card section" aria-label="Journal trade review">
+      <nav className="backtest-carousel-nav" aria-label="Trade navigation">
+        {previous ? <Link className="btn secondary" href={href(previous.id)} scroll={false}><ChevronLeft size={16}/>Previous trade</Link> : <button className="btn secondary" disabled><ChevronLeft size={16}/>Previous trade</button>}
+        <span>{live ? "Newest trades first" : "Session trades"}</span>
+        {next ? <Link className="btn secondary" href={href(next.id)} scroll={false}>Next trade<ChevronRight size={16}/></Link> : <button className="btn secondary" disabled>Next trade<ChevronRight size={16}/></button>}
+      </nav>
+      <BacktestTradeCard trade={trade} currency={trade.account.currency} journal={live}/>
+    </section>
   </div>;
 }
-
-function ReviewMetric({ label, value }: { label: string; value: string }) { return <div><span className="stat-label">{label}</span><b>{value}</b></div>; }
-function Detail({ label, value }: { label: string; value: string }) { return <div className="detail-row"><span>{label}</span><b>{value}</b></div>; }

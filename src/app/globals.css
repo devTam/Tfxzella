@@ -62,3 +62,23 @@ input[type="checkbox"],input[type="radio"],input[type="color"],input[type="hidde
 .btn[data-pending="true"]::before,.icon-btn[data-pending="true"]::before{content:"";width:14px;height:14px;flex:0 0 auto;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:spin .7s linear infinite}
 .plans-layout{grid-template-columns:minmax(0,1.45fr) minmax(320px,.75fr);align-items:start}.plan-form{align-items:start}.plan-form .field{min-width:0}.plan-form input,.plan-form select{min-width:0}.plan-form textarea{min-height:112px}.plan-form .form-footer{padding-top:2px}.plans-layout>section{min-width:0}.plans-layout .compact-card{display:grid;gap:8px}.plans-layout .compact-card p{margin:0}.plans-layout .compact-card small{display:block;color:var(--muted);overflow-wrap:anywhere}
 @media(max-width:1000px){.plans-layout{grid-template-columns:1fr}}
+.backtest-carousel-nav{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-bottom:20px;margin-bottom:20px;border-bottom:1px solid var(--line)}
+.backtest-carousel-nav>span{color:var(--muted);font-size:13px;text-align:center}
+.backtest-carousel-nav button:disabled{opacity:.4;cursor:not-allowed}
+.backtest-trade-metrics,.backtest-trade-levels{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px;margin:24px 0}
+.backtest-trade-levels{grid-template-columns:repeat(4,minmax(0,1fr));padding-top:20px;border-top:1px solid var(--line)}
+.backtest-trade dd{margin:6px 0 0;font-weight:700;overflow-wrap:anywhere}
+.backtest-trade-notes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;margin-top:24px}
+.backtest-trade-notes section{padding:18px;background:var(--panel-2);border:1px solid var(--line);border-radius:12px}
+.backtest-trade-notes p,.backtest-trade-notes dd{white-space:pre-wrap;overflow-wrap:anywhere}
+.backtest-trade-notes dl{display:grid;gap:16px;margin-bottom:0}
+@media(max-width:650px){.backtest-trade-metrics,.backtest-trade-levels{grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}.backtest-trade-notes{grid-template-columns:1fr}.backtest-carousel-nav{flex-wrap:wrap}.backtest-carousel-nav>span{order:-1;width:100%}.backtest-carousel-nav .btn{font-size:12px;padding:10px}}
+
+.review-priority-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:20px}
+.review-comparison{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;align-items:start}
+.review-comparison-column{min-width:0;display:grid;gap:16px}
+.review-evidence{min-width:0;padding:18px;border:1px solid var(--line);border-radius:12px;background:var(--panel-2)}
+.review-evidence h3{margin-top:0}.review-evidence .detail-row{gap:16px;align-items:start}.review-evidence .detail-row b{text-align:right;overflow-wrap:anywhere;min-width:0}
+.review-evidence p,.backtest-trade-notes .review-text p{white-space:pre-wrap;overflow-wrap:anywhere}
+@media(max-width:900px){.review-comparison{grid-template-columns:1fr}}
+@media(max-width:650px){.review-priority-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}

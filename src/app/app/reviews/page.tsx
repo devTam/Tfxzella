@@ -20,7 +20,7 @@ export default async function Reviews({searchParams}:{searchParams:Promise<Workf
   const user = await viewer(),query=await searchParams,date=workflowDate(query.date);
   const [accountList, reviews, trades, plans] = await Promise.all([
     accounts(),
-    db.review.findMany({ where: { userId: user.id }, include: { account: true }, orderBy: { startsAt: "desc" } }),
+    db.review.findMany({ where: { userId: user.id }, include: { account: true }, orderBy: [{ startsAt: "desc" }, { id: "desc" }] }),
     db.trade.findMany({ where: { account: { userId: user.id }, source: "LIVE", deletedAt: null }, include: { account: true, instrument: true, attachments: { orderBy: { createdAt: "asc" } } }, orderBy: { openedAt: "desc" } }),
     db.tradePlan.findMany({where:{userId:user.id},include:{account:true,attachments:true},orderBy:{planDate:"desc"}}),
   ]);
