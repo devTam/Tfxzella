@@ -1,4 +1,5 @@
 "use server";
+import { permanentlyDeleteTrades } from "@/lib/delete-trades";
 import { hash } from "@node-rs/argon2";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -98,7 +99,21 @@ export async function createTrade(formData:FormData){
   revalidatePath("/app");revalidatePath("/app/backtests");redirect(backtestSession?`/app/backtests/${backtestSession.id}`:workflowHref("/app/journal",accountId,text(formData,"openedAt").slice(0,10)));
 }
 
-export async function deleteTrade(formData:FormData){ const uid=await userId(); const id=text(formData,"id"); await db.trade.updateMany({where:{id,account:{userId:uid}},data:{deletedAt:new Date()}}); revalidatePath("/app","layout");revalidatePath("/app/backtests","layout"); }
+export async function deleteTrade(formData:FormData){
+  const uid=await userId(),id=text(formData,"id");
+  if(!id)throw new Error("Trade not found");
+  await permanentlyDeleteTrades(uid,{id});
+  revalidatePath("/app","layout");
+}
+export async function deleteAllLiveTrades(formData:FormData){
+  const uid=await userId(),accountId=text(formData,"accountId");
+  const account=accountId?await db.tradingAccount.findFirst({where:{id:accountId,userId:uid}}):null;
+  if(!account)throw new Error("Select an account first");
+  if(text(formData,"confirmation")!=="DELETE")throw new Error("Type DELETE to confirm permanent deletion");
+  await permanentlyDeleteTrades(uid,{accountId});
+  revalidatePath("/app","layout");
+  redirect(workflowHref("/app/journal",accountId));
+}
 export async function createPlan(formData:FormData){ const uid=await userId(); const accountId=text(formData,"accountId"),requestedPlaybook=text(formData,"playbookId")||null; if(!await db.tradingAccount.findFirst({where:{id:accountId,userId:uid}})) throw new Error("Account not found");const playbookId=requestedPlaybook&&(await db.playbook.findFirst({where:{id:requestedPlaybook,userId:uid}}))?requestedPlaybook:null;const images=planImages(formData,uid);const existing=await db.tradePlan.findUnique({where:{accountId_planDate:{accountId,planDate:new Date(`${text(formData,"planDate")}T00:00:00.000Z`)}},include:{_count:{select:{attachments:true}}}});if(images.length+(existing?._count.attachments||0)>MAX_SCREENSHOTS)throw new Error(`This day already has expectation charts. Edit the daily plan to replace or remove them (${MAX_SCREENSHOTS} maximum).`);const data={playbookId,marketBias:text(formData,"marketBias"),drawOnLiquidity:text(formData,"drawOnLiquidity")||null,watchlist:text(formData,"watchlist").split(",").map(x=>x.trim()).filter(Boolean),thesis:text(formData,"thesis"),newsOnDay:text(formData,"newsOnDay")||null,entryConditions:text(formData,"entryConditions"),stopPlan:text(formData,"stopPlan"),targetPlan:text(formData,"targetPlan"),plannedEntry:optionalNumber(formData,"plannedEntry"),plannedStop:optionalNumber(formData,"plannedStop"),plannedTarget:optionalNumber(formData,"plannedTarget"),maxTrades:optionalInteger(formData,"maxTrades",1,100),riskBudget:optionalNumber(formData,"riskBudget"),notes:text(formData,"notes")}; const plan=await db.tradePlan.upsert({where:{accountId_planDate:{accountId,planDate:new Date(`${text(formData,"planDate")}T00:00:00.000Z`)}},update:{...data,...(images.length?{attachments:{create:images}}:{})},create:{userId:uid,accountId,planDate:new Date(`${text(formData,"planDate")}T00:00:00.000Z`),...data,attachments:{create:images}}});await db.trade.updateMany({where:{planId:plan.id},data:{newsOnDay:data.newsOnDay}}); revalidatePath("/app");revalidatePath("/app/reviews");revalidatePath("/app/plans","layout");revalidatePath("/app/journal/new");revalidatePath("/app/backtests","layout");redirect(`/app/plans/${plan.id}`); }
 export async function createPlaybook(formData:FormData){ const uid=await userId(); await db.playbook.create({data:{userId:uid,name:text(formData,"name"),description:text(formData,"description"),setupCriteria:text(formData,"setupCriteria"),invalidationRules:text(formData,"invalidationRules"),riskRules:text(formData,"riskRules"),entryChecklist:lines(formData,"entryChecklist"),exitChecklist:lines(formData,"exitChecklist"),examples:text(formData,"examples")}}); revalidatePlaybooks(); }
 export async function createReview(formData:FormData){
