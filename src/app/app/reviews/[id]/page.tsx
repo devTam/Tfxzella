@@ -1,3 +1,4 @@
+import { NavigationLink } from "@/components/navigation-link";
 import { WorkflowNav } from "@/components/workflow-nav";
 import { TradeChartGallery } from "@/components/trade-chart-gallery";
 import { workflowHref } from "@/lib/workflow";
@@ -89,8 +90,8 @@ function Charts({ images, label, empty }: { images: { objectKey: string }[]; lab
 
 function ReviewNavigation({ previous, next }: { previous: { id: string } | null; next: { id: string } | null }) {
   return <nav className="backtest-carousel-nav" aria-label="Review navigation">
-        {previous ? <Link className="btn secondary" href={`/app/reviews/${previous.id}`}><ChevronLeft size={16}/>Previous review</Link> : <button className="btn secondary" disabled><ChevronLeft size={16}/>Previous review</button>}
+        {previous ? <NavigationLink className="btn secondary" href={`/app/reviews/${previous.id}`}><ChevronLeft size={16}/>Previous review</NavigationLink> : <button className="btn secondary" disabled><ChevronLeft size={16}/>Previous review</button>}
         <span>Newest reviews first</span>
-        {next ? <Link className="btn secondary" href={`/app/reviews/${next.id}`}>Next review<ChevronRight size={16}/></Link> : <button className="btn secondary" disabled>Next review<ChevronRight size={16}/></button>}
+        {next ? <NavigationLink className="btn secondary" href={`/app/reviews/${next.id}`}>Next review<ChevronRight size={16}/></NavigationLink> : <button className="btn secondary" disabled>Next review<ChevronRight size={16}/></button>}
       </nav>;
 }

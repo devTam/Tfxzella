@@ -1,3 +1,4 @@
+import { NavigationLink } from "@/components/navigation-link";
 import { WorkflowNav } from "@/components/workflow-nav";
 import { BacktestTradeCard } from "@/components/backtest-trade-card";
 import Link from "next/link";
@@ -26,9 +27,9 @@ export default async function TradeReview({ params, searchParams }: { params: Pr
     <div className="page-head"><div><Link className="back-link" href={back}><ArrowLeft size={15}/>{live ? "All trades" : "Back to session"}</Link><span className="eyebrow">Trade review</span><h1>{trade.instrument.symbol} · {trade.direction}</h1><p>{formatNewYorkDateTime(trade.openedAt)} · {trade.account.name}</p></div></div>
     <section className="card section" aria-label="Journal trade review">
       <nav className="backtest-carousel-nav" aria-label="Trade navigation">
-        {previous ? <Link className="btn secondary" href={href(previous.id)} scroll={false}><ChevronLeft size={16}/>Previous trade</Link> : <button className="btn secondary" disabled><ChevronLeft size={16}/>Previous trade</button>}
+        {previous ? <NavigationLink className="btn secondary" href={href(previous.id)} scroll={false}><ChevronLeft size={16}/>Previous trade</NavigationLink> : <button className="btn secondary" disabled><ChevronLeft size={16}/>Previous trade</button>}
         <span>{live ? "Newest trades first" : "Session trades"}</span>
-        {next ? <Link className="btn secondary" href={href(next.id)} scroll={false}>Next trade<ChevronRight size={16}/></Link> : <button className="btn secondary" disabled>Next trade<ChevronRight size={16}/></button>}
+        {next ? <NavigationLink className="btn secondary" href={href(next.id)} scroll={false}>Next trade<ChevronRight size={16}/></NavigationLink> : <button className="btn secondary" disabled>Next trade<ChevronRight size={16}/></button>}
       </nav>
       <BacktestTradeCard trade={trade} currency={trade.account.currency} journal={live}/>
     </section>

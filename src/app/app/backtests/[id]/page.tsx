@@ -1,3 +1,4 @@
+import { NavigationLink } from "@/components/navigation-link";
 import Link from "next/link";
 import { ArrowLeft, ChevronLeft, ChevronRight, Pencil, Plus, Trash2 } from "lucide-react";
 import { notFound } from "next/navigation";
@@ -24,9 +25,9 @@ export default async function BacktestSessionPage({params,searchParams}:{params:
     <section className="card section backtest-carousel" aria-label="Backtest trades" aria-roledescription="carousel">
       {trades.length ? <>
         <nav className="backtest-carousel-nav" aria-label="Trade navigation">
-          {page > 1 ? <Link className="btn secondary" href={`?page=${page-1}`} scroll={false}><ChevronLeft size={16}/>Previous trade</Link> : <button className="btn secondary" disabled><ChevronLeft size={16}/>Previous trade</button>}
+          {page > 1 ? <NavigationLink className="btn secondary" href={`?page=${page-1}`} scroll={false}><ChevronLeft size={16}/>Previous trade</NavigationLink> : <button className="btn secondary" disabled><ChevronLeft size={16}/>Previous trade</button>}
           <span role="status" aria-live="polite">Trade {page} of {total}</span>
-          {page < total ? <Link className="btn secondary" href={`?page=${page+1}`} scroll={false}>Next trade<ChevronRight size={16}/></Link> : <button className="btn secondary" disabled>Next trade<ChevronRight size={16}/></button>}
+          {page < total ? <NavigationLink className="btn secondary" href={`?page=${page+1}`} scroll={false}>Next trade<ChevronRight size={16}/></NavigationLink> : <button className="btn secondary" disabled>Next trade<ChevronRight size={16}/></button>}
         </nav>
         <div role="group" aria-roledescription="slide" aria-label={`Trade ${page} of ${total}`}><BacktestTradeCard trade={trades[0]} currency={session.account.currency}/></div>
       </> : <div className="empty">No trades recorded in this session yet.</div>}

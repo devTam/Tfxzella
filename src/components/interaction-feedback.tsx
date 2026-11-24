@@ -19,9 +19,8 @@ export function InteractionFeedback(){
       const id=toast.loading(button.dataset.pendingLabel||"Working…");
       queueMicrotask(()=>{const observer=new MutationObserver(()=>{observer.disconnect();finish(button,id,message)});observer.observe(form.parentElement||form,{childList:true,subtree:true,characterData:true});setTimeout(()=>observer.disconnect(),15000)});
     };
-    const onClick=(event:MouseEvent)=>{const target=event.target instanceof Element?event.target.closest<HTMLAnchorElement>("a.btn, a.icon-btn"):null;if(target&&!target.querySelector(".link-spinner")&&!target.hasAttribute("download")&&target.target!=="_blank")target.dataset.pending="true"};
-    document.addEventListener("submit",onSubmit,true);document.addEventListener("click",onClick,true);
-    return()=>{document.removeEventListener("submit",onSubmit,true);document.removeEventListener("click",onClick,true)};
+    document.addEventListener("submit",onSubmit,true);
+    return()=>{document.removeEventListener("submit",onSubmit,true)};
   },[]);
   return null;
 }
