@@ -14,7 +14,19 @@ export function SubmitButton({children,pendingLabel="Working…",successMessage=
   const [submitted,setSubmitted]=useState(false),wasPending=useRef(false),toastId=useRef<string|number|undefined>(undefined),isPending=pending&&submitted;
   // Pending ending also happens when an action fails. Navigation feedback is
   // handled by ToastCoordinator; this button cannot infer a successful save.
-  useEffect(()=>{if(isPending){wasPending.current=true;beginPendingAction(successMessage);toastId.current=toast.loading(pendingLabel)}else if(wasPending.current){clearPendingAction();toast.dismiss(toastId.current);wasPending.current=false;setSubmitted(false)}},[isPending,pendingLabel,successMessage]);
+  useEffect(()=>{
+    if(isPending){
+      wasPending.current=true;
+      beginPendingAction(successMessage);
+      const id=toast.loading(pendingLabel);
+      toastId.current=id;
+      // Deleting a trade can remove this button before pending becomes false.
+      // Dismiss this submission's toast when its button leaves the page, too.
+      return()=>{toast.dismiss(id)};
+    }else if(wasPending.current){
+      clearPendingAction();toast.dismiss(toastId.current);wasPending.current=false;setSubmitted(false);
+    }
+  },[isPending,pendingLabel,successMessage]);
   return <button {...props} type={props.type??"submit"} data-managed-pending="true" disabled={disabled||isPending} aria-busy={isPending} onClick={event=>{onClick?.(event);if(!event.defaultPrevented&&confirmMessage&&!window.confirm(confirmMessage))event.preventDefault();if(!event.defaultPrevented)setSubmitted(true);}}>{isPending?<><LoaderCircle className="spin" size={16} aria-hidden="true"/><span>{pendingLabel}</span></>:children}</button>;
 }
 
