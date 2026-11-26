@@ -1,0 +1,34 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { SubmitButton } from "./confirm-submit-button";
+import { toast } from "sonner";
+import { clearPendingAction } from "./interaction-feedback";
+
+const state = vi.hoisted(() => ({
+  pending: true,
+  refs: [] as { current: unknown }[],
+  cursor: 0,
+}));
+vi.mock("react", async original => ({
+  ...await original<typeof import("react")>(),
+  useState: () => [true, vi.fn()],
+  useRef: (value: unknown) => state.refs[state.cursor++] ?? (state.refs[state.cursor - 1] = { current: value }),
+  useEffect: (effect: () => void) => effect(),
+}));
+vi.mock("react-dom", () => ({ useFormStatus: () => ({ pending: state.pending }) }));
+vi.mock("sonner", () => ({ toast: { loading: vi.fn(() => "saving"), dismiss: vi.fn(), success: vi.fn() } }));
+vi.mock("./interaction-feedback", () => ({ beginPendingAction: vi.fn(), clearPendingAction: vi.fn() }));
+
+beforeEach(() => { vi.clearAllMocks(); state.refs = []; state.cursor = 0; state.pending = true; });
+
+describe("submission feedback", () => {
+  it("does not report a successful save merely because a failed action stopped pending", () => {
+    SubmitButton({ children: "Save trade", successMessage: "Trade saved" });
+    expect(toast.loading).toHaveBeenCalled();
+    state.pending = false;
+    state.cursor = 0;
+    SubmitButton({ children: "Save trade", successMessage: "Trade saved" });
+    expect(toast.dismiss).toHaveBeenCalledWith("saving");
+    expect(clearPendingAction).toHaveBeenCalled();
+    expect(toast.success).not.toHaveBeenCalled();
+  });
+});

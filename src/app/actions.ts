@@ -103,8 +103,12 @@ export async function createTrade(formData:FormData){
 export async function deleteTrade(formData:FormData){
   const uid=await userId(),id=text(formData,"id");
   if(!id)throw new Error("Trade not found");
+  const returnToList=text(formData,"redirectAfterDelete")==="true";
+  const trade=returnToList?await db.trade.findFirst({where:{id,account:{userId:uid}},select:{accountId:true,backtestSessionId:true}}):null;
+  if(returnToList&&!trade)throw new Error("Trade not found");
   await permanentlyDeleteTrades(uid,{id});
   revalidatePath("/app","layout");
+  if(trade)redirect(trade.backtestSessionId?`/app/backtests/${trade.backtestSessionId}`:workflowHref("/app/journal",trade.accountId));
 }
 export async function deleteAllLiveTrades(formData:FormData){
   const uid=await userId(),accountId=text(formData,"accountId");

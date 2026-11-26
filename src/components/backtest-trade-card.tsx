@@ -1,6 +1,8 @@
 import type { Prisma } from "@prisma/client";
 import Link from "next/link";
-import { Pencil } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
+import { deleteTrade } from "@/app/actions";
+import { SubmitButton } from "@/components/confirm-submit-button";
 import { TradeChartGallery } from "@/components/trade-chart-gallery";
 import { backtestRiskReward } from "@/lib/backtest-risk";
 import { formatPoints, tradePoints } from "@/lib/trade-points";
@@ -15,7 +17,7 @@ export function BacktestTradeCard({ trade, currency, journal = false }: { trade:
   const points = tradePoints({ entry: trade.averageEntry, stop: trade.stopPrice, target: trade.targetPrice, exit: trade.averageExit, direction: trade.direction });
   const riskAmount = tradeRiskAmount({ entry: trade.averageEntry, stop: trade.stopPrice, quantity: trade.quantity, multiplier: trade.instrument.pointValue });
   return <article className="backtest-trade" aria-label={`${trade.instrument.symbol} ${journal ? "journal" : "backtest"} trade`}>
-    <div className="widget-head"><div><span className="stat-label">{trade.direction}</span><h2>{trade.instrument.symbol}</h2></div><Link className="btn secondary" href={`/app/journal/${trade.id}/edit`}><Pencil size={15}/>Edit trade</Link></div>
+    <div className="widget-head"><div><span className="stat-label">{trade.direction}</span><h2>{trade.instrument.symbol}</h2></div><div className="actions"><Link className="btn secondary" href={`/app/journal/${trade.id}/edit`}><Pencil size={15}/>Edit trade</Link><form action={deleteTrade}><input type="hidden" name="id" value={trade.id}/><input type="hidden" name="redirectAfterDelete" value="true"/><SubmitButton className="btn danger" pendingLabel="Deleting trade…" successMessage="Trade permanently deleted" confirmMessage={`Permanently delete this ${trade.instrument.symbol} ${journal ? "live" : "backtest"} trade, its executions, review and screenshots? This cannot be undone.`}><Trash2 size={15}/>Delete trade</SubmitButton></form></div></div>
     <dl className="backtest-trade-metrics">
       <Detail label="Entry time (New York)" value={formatNewYorkDateTime(trade.openedAt)}/>
       <Detail label="Exit time (New York)" value={trade.closedAt ? formatNewYorkDateTime(trade.closedAt) : "Open"}/>
